@@ -1,0 +1,326 @@
+{
+  "infantry": {
+    "name_ja": "盾兵",
+    "attack_priority": ["lancer", "archer", "infantry"],
+    "tiers": {
+      "T10": {
+        "name_ja": "切り札盾兵",
+        "fc_levels": {
+          "0":  {"atk": 10, "def": 13, "hp": 15, "lethality": 10},
+          "1":  {"atk": 11, "def": 14, "hp": 16, "lethality": 10},
+          "2":  {"atk": 12, "def": 16, "hp": 17, "lethality": 11},
+          "3":  {"atk": 13, "def": 17, "hp": 18, "lethality": 12},
+          "4":  {"atk": 13, "def": 18, "hp": 19, "lethality": 13},
+          "5":  {"atk": 14, "def": 20, "hp": 20, "lethality": 13},
+          "6":  {"atk": 14, "def": 21, "hp": 21, "lethality": 13},
+          "7":  {"atk": 15, "def": 22, "hp": 22, "lethality": 14},
+          "8":  {"atk": 15, "def": 23, "hp": 23, "lethality": 15},
+          "9":  {"atk": 15, "def": 24, "hp": 23, "lethality": 15},
+          "10": {"atk": 16, "def": 25, "hp": 24, "lethality": 15}
+        }
+      },
+      "T11": {
+        "name_ja": "烈日盾兵",
+        "fc_levels": {
+          "0":  {"atk": 12, "def": 15, "hp": 17, "lethality": 12},
+          "1":  {"atk": 13, "def": 16, "hp": 18, "lethality": 12},
+          "2":  {"atk": 14, "def": 17, "hp": 19, "lethality": 13},
+          "3":  {"atk": 15, "def": 18, "hp": 20, "lethality": 14},
+          "4":  {"atk": 15, "def": 19, "hp": 21, "lethality": 15},
+          "5":  {"atk": 16, "def": 22, "hp": 22, "lethality": 15},
+          "6":  {"atk": 17, "def": 23, "hp": 23, "lethality": 16},
+          "7":  {"atk": 17, "def": 24, "hp": 24, "lethality": 16},
+          "8":  {"atk": 18, "def": 25, "hp": 25, "lethality": 17},
+          "9":  {"atk": 18, "def": 27, "hp": 26, "lethality": 17},
+          "10": {"atk": 19, "def": 28, "hp": 27, "lethality": 18}
+        }
+      }
+    },
+    "skills": {
+      "T1": [
+        {
+          "id": "infantry_bonus_vs_lancer",
+          "type": "bonus_vs",
+          "trigger": "passive",
+          "target_unit": "lancer",
+          "effects": [{"type": "damage_up", "value": 0.10}],
+          "description_ja": "対槍兵時、与ダメージ10％上昇"
+        }
+      ],
+      "T7": [
+        {
+          "id": "infantry_def_vs_lancer",
+          "type": "bonus_vs",
+          "trigger": "passive",
+          "target_unit": "lancer",
+          "effects": [{"type": "def_up", "value": 0.10}],
+          "description_ja": "対槍兵時、防御が10％上昇"
+        }
+      ],
+      "FC3": [
+        {
+          "id": "crystal_shield_1",
+          "type": "crystal_shield",
+          "trigger": "on_receive_damage",
+          "chance": 0.25,
+          "effects": [{"type": "damage_offset", "value": 0.36}],
+          "description_ja": "25%の確率で36%のダメージを相殺"
+        }
+      ],
+      "FC5": [
+        {
+          "id": "crystal_shield_2",
+          "type": "crystal_shield",
+          "trigger": "on_receive_damage",
+          "overrides": "crystal_shield_1",
+          "chance": 0.375,
+          "effects": [{"type": "damage_offset", "value": 0.36}],
+          "description_ja": "37.5%の確率で36%のダメージを相殺"
+        }
+      ],
+      "FC8": [
+        {
+          "id": "body_of_light_1",
+          "type": "body_of_light",
+          "trigger": "passive",
+          "effects": [
+            {"type": "def_up", "value": 0.04},
+            {"type": "extra_reduce_when_shield_active", "value": 0.10}
+          ],
+          "description_ja": "盾兵の防御力4％増加。Crystal Shield発動時、追加で10%ダメージ軽減"
+        }
+      ],
+      "FC10": [
+        {
+          "id": "body_of_light_2",
+          "type": "body_of_light",
+          "trigger": "passive",
+          "overrides": "body_of_light_1",
+          "effects": [
+            {"type": "def_up", "value": 0.06},
+            {"type": "extra_reduce_when_shield_active", "value": 0.15}
+          ],
+          "description_ja": "盾兵の防御力6％増加。Crystal Shield発動時、追加で15%ダメージ軽減"
+        }
+      ]
+    }
+  },
+
+  "lancer": {
+    "name_ja": "槍兵",
+    "attack_priority": ["archer", "infantry", "lancer"],
+    "tiers": {
+      "T10": {
+        "name_ja": "切り札槍兵",
+        "fc_levels": {
+          "0":  {"atk": 13, "def": 11, "hp": 11, "lethality": 14},
+          "1":  {"atk": 14, "def": 12, "hp": 11, "lethality": 15},
+          "2":  {"atk": 16, "def": 13, "hp": 12, "lethality": 16},
+          "3":  {"atk": 17, "def": 14, "hp": 13, "lethality": 17},
+          "4":  {"atk": 18, "def": 14, "hp": 13, "lethality": 18},
+          "5":  {"atk": 20, "def": 15, "hp": 14, "lethality": 19},
+          "6":  {"atk": 21, "def": 15, "hp": 14, "lethality": 20},
+          "7":  {"atk": 22, "def": 16, "hp": 15, "lethality": 21},
+          "8":  {"atk": 23, "def": 17, "hp": 15, "lethality": 22},
+          "9":  {"atk": 24, "def": 16, "hp": 15, "lethality": 22},
+          "10": {"atk": 25, "def": 17, "hp": 16, "lethality": 23}
+        }
+      },
+      "T11": {
+        "name_ja": "烈日槍兵",
+        "fc_levels": {
+          "0":  {"atk": 15, "def": 13, "hp": 13, "lethality": 16},
+          "1":  {"atk": 16, "def": 14, "hp": 13, "lethality": 17},
+          "2":  {"atk": 18, "def": 15, "hp": 14, "lethality": 18},
+          "3":  {"atk": 19, "def": 16, "hp": 15, "lethality": 19},
+          "4":  {"atk": 20, "def": 16, "hp": 15, "lethality": 20},
+          "5":  {"atk": 22, "def": 17, "hp": 16, "lethality": 21},
+          "6":  {"atk": 23, "def": 17, "hp": 16, "lethality": 22},
+          "7":  {"atk": 24, "def": 18, "hp": 17, "lethality": 23},
+          "8":  {"atk": 25, "def": 19, "hp": 17, "lethality": 24},
+          "9":  {"atk": 27, "def": 19, "hp": 18, "lethality": 25},
+          "10": {"atk": 28, "def": 21, "hp": 20, "lethality": 26}
+        }
+      }
+    },
+    "skills": {
+      "T1": [
+        {
+          "id": "lancer_charge",
+          "type": "bonus_vs",
+          "trigger": "passive",
+          "target_unit": "archer",
+          "effects": [{"type": "damage_up", "value": 0.10}],
+          "description_ja": "チャージ – 弓兵への与ダメージが10%増加"
+        }
+      ],
+      "T7": [
+        {
+          "id": "lancer_ambush",
+          "type": "target_override",
+          "trigger": "on_attack",
+          "chance": 0.20,
+          "effects": [{"type": "bypass_to", "value": "archer"}],
+          "description_ja": "待ち伏せ – 20%の確率で盾兵を迂回して弓兵に直接攻撃"
+        }
+      ],
+      "FC3": [
+        {
+          "id": "crystal_lance_1",
+          "type": "crystal_lance",
+          "trigger": "on_attack",
+          "chance": 0.10,
+          "effects": [{"type": "damage_multiply", "value": 2.0}],
+          "description_ja": "10%の確率でダメージが2倍"
+        }
+      ],
+      "FC5": [
+        {
+          "id": "crystal_lance_2",
+          "type": "crystal_lance",
+          "trigger": "on_attack",
+          "overrides": "crystal_lance_1",
+          "chance": 0.15,
+          "effects": [{"type": "damage_multiply", "value": 2.0}],
+          "description_ja": "15%の確率でダメージが2倍"
+        }
+      ],
+      "FC8": [
+        {
+          "id": "white_heat_field_1",
+          "type": "white_heat_field",
+          "trigger": "on_receive_damage",
+          "chance": 0.10,
+          "effects": [{"type": "damage_halve", "value": 0.50}],
+          "description_ja": "10%の確率で受けるダメージを半分にする"
+        }
+      ],
+      "FC10": [
+        {
+          "id": "white_heat_field_2",
+          "type": "white_heat_field",
+          "trigger": "on_receive_damage",
+          "overrides": "white_heat_field_1",
+          "chance": 0.15,
+          "effects": [{"type": "damage_halve", "value": 0.50}],
+          "description_ja": "15%の確率で受けるダメージを半分にする"
+        }
+      ]
+    }
+  },
+
+  "archer": {
+    "name_ja": "弓兵",
+    "attack_priority": ["infantry", "lancer", "archer"],
+    "tiers": {
+      "T10": {
+        "name_ja": "切り札弓兵",
+        "fc_levels": {
+          "0":  {"atk": 14, "def": 10, "hp": 10, "lethality": 15},
+          "1":  {"atk": 15, "def": 11, "hp": 11, "lethality": 16},
+          "2":  {"atk": 17, "def": 12, "hp": 12, "lethality": 17},
+          "3":  {"atk": 18, "def": 13, "hp": 13, "lethality": 18},
+          "4":  {"atk": 19, "def": 14, "hp": 13, "lethality": 19},
+          "5":  {"atk": 21, "def": 14, "hp": 14, "lethality": 20},
+          "6":  {"atk": 22, "def": 15, "hp": 14, "lethality": 21},
+          "7":  {"atk": 23, "def": 15, "hp": 15, "lethality": 22},
+          "8":  {"atk": 24, "def": 16, "hp": 15, "lethality": 23},
+          "9":  {"atk": 25, "def": 16, "hp": 15, "lethality": 23},
+          "10": {"atk": 26, "def": 17, "hp": 16, "lethality": 24}
+        }
+      },
+      "T11": {
+        "name_ja": "烈日弓兵",
+        "fc_levels": {
+          "0":  {"atk": 16, "def": 12, "hp": 12, "lethality": 17},
+          "1":  {"atk": 17, "def": 13, "hp": 13, "lethality": 18},
+          "2":  {"atk": 19, "def": 14, "hp": 14, "lethality": 19},
+          "3":  {"atk": 20, "def": 15, "hp": 15, "lethality": 20},
+          "4":  {"atk": 21, "def": 16, "hp": 15, "lethality": 21},
+          "5":  {"atk": 23, "def": 16, "hp": 16, "lethality": 22},
+          "6":  {"atk": 24, "def": 17, "hp": 16, "lethality": 23},
+          "7":  {"atk": 25, "def": 18, "hp": 17, "lethality": 24},
+          "8":  {"atk": 26, "def": 19, "hp": 18, "lethality": 25},
+          "9":  {"atk": 28, "def": 19, "hp": 18, "lethality": 26},
+          "10": {"atk": 30, "def": 21, "hp": 20, "lethality": 27}
+        }
+      }
+    },
+    "skills": {
+      "T1": [
+        {
+          "id": "archer_ranged_attack",
+          "type": "bonus_vs",
+          "trigger": "passive",
+          "target_unit": "infantry",
+          "effects": [{"type": "damage_up", "value": 0.10}],
+          "description_ja": "遠距離攻撃 – 歩兵への与ダメージが10%増加"
+        }
+      ],
+      "T7": [
+        {
+          "id": "archer_volley",
+          "type": "volley",
+          "trigger": "on_attack",
+          "chance": 0.10,
+          "effects": [{"type": "double_attack", "value": true}],
+          "description_ja": "ボレー – 10%の確率で二回攻撃"
+        }
+      ],
+      "FC3": [
+        {
+          "id": "crystal_gunpowder_1",
+          "type": "crystal_gunpowder",
+          "trigger": "on_attack",
+          "chance": 0.20,
+          "effects": [{"type": "extra_damage", "value": 0.50}],
+          "description_ja": "20%の確率で50%の追加ダメージ"
+        }
+      ],
+      "FC5": [
+        {
+          "id": "crystal_gunpowder_2",
+          "type": "crystal_gunpowder",
+          "trigger": "on_attack",
+          "overrides": "crystal_gunpowder_1",
+          "chance": 0.30,
+          "effects": [{"type": "extra_damage", "value": 0.50}],
+          "description_ja": "30%の確率で50%の追加ダメージ"
+        }
+      ],
+      "FC8": [
+        {
+          "id": "flame_charge_1",
+          "type": "flame_charge",
+          "trigger": "passive",
+          "effects": [
+            {"type": "atk_up", "value": 0.04},
+            {"type": "extra_damage_when_gunpowder_active", "value": 0.25}
+          ],
+          "description_ja": "基本攻撃力4%増加。ガンパウダー発動時、25%の追加ダメージ"
+        }
+      ],
+      "FC10": [
+        {
+          "id": "flame_charge_2",
+          "type": "flame_charge",
+          "trigger": "passive",
+          "overrides": "flame_charge_1",
+          "effects": [
+            {"type": "atk_up", "value": 0.06},
+            {"type": "extra_damage_when_gunpowder_active", "value": 0.375}
+          ],
+          "description_ja": "基本攻撃力6%増加。ガンパウダー発動時、37.5%の追加ダメージ"
+        }
+      ]
+    }
+  },
+
+  "_meta": {
+    "version": "1.0.0",
+    "description": "WoS Battle Simulator - Troop Stats & Skills (T10/T11, FC0-FC10)",
+    "stat_unit": "raw_value (multiplied by buffs in engine)",
+    "skill_override_rule": "Higher FC skill with 'overrides' field replaces lower FC skill",
+    "fc_skill_unlock_rule": "FC3/FC5/FC8/FC10 skills are available when unit FC >= threshold"
+  }
+}

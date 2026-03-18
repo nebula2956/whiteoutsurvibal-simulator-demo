@@ -1,0 +1,1414 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "description": "WoS Battle Simulator - Hero Definitions",
+    "notes": {
+      "base_stats": "Percentage buffs applied to army stats (e.g. 200.16% = 2.0016 multiplier)",
+      "exclusive_gear_scaling": "Skill effect values are given at 5 step points. Map to levels 1-10 via step function: Lv1-2=step1, Lv3-4=step2, Lv5-6=step3, Lv7-8=step4, Lv9-10=step5",
+      "exclusive_gear_base_stats": "Lethality/HP max values scale linearly from 0 at Lv0 to max at Lv10. Per-level = max * (level / 10)",
+      "side": "attack = applies when hero's army is attacking; defense = applies when hero's army is defending",
+      "skill_trigger_types": [
+        "passive",
+        "on_turn_start",
+        "on_attack",
+        "on_receive_damage",
+        "every_n_turns",
+        "every_n_attacks",
+        "on_every_attack"
+      ],
+      "skill_target_types": [
+        "ally_all",
+        "enemy_all",
+        "ally_rally",
+        "self_unit",
+        "primary_target"
+      ],
+      "duration_rules": "passive→null(永続), on_turn_start/on_attack等の確率系→1(発動ターンのみ), every_n_turns→明示整数",
+      "effect_types_extended": [
+        "damage_taken_up: 単体被ダメ増デバフ, duration_hits で持続ヒット数指定",
+        "target_vulnerability: 脆弱付与, 次攻撃の追加ダメ枠に加算",
+        "aoe_extra_damage: 全敵追加ダメージ",
+        "attack_count_extra_damage: 攻撃回数トリガーの追加ダメージ"
+      ],
+      "rarity_rules": "legend = ラリーリーダー・メンバー両方可, epic = メンバーのみ（ラリーリーダー不可）"
+    }
+  },
+  "Flint": {
+    "rarity": "legend",
+    "troop_type": "infantry",
+    "base_stats": {
+      "atk": 2.4019,
+      "def": 2.4019
+    },
+    "skills": [
+      {
+        "id": "flint_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 1.0,
+            "unit_type": "infantry"
+          }
+        ],
+        "description_ja": "盾兵の与ダメージを100%増加"
+      },
+      {
+        "id": "flint_s2",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "atk_up",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "全軍の攻撃力を25%増加"
+      },
+      {
+        "id": "flint_s3",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "lethality_up",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "全軍の殺傷力を25%増加"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.6,
+        "hp": 0.6
+      },
+      "skill_effects": [
+        {
+          "side": "defense",
+          "target": "ally_all",
+          "effect_type": "atk_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "防衛側の全軍の攻撃力を増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Zinman": {
+    "rarity": "legend",
+    "context": "expedition_only",
+    "base_stats": {
+      "atk": 2.0016,
+      "def": 2.0016
+    },
+    "skills": [
+      {
+        "id": "zinman_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "def_up",
+            "value": 0.1
+          },
+          {
+            "type": "hp_up",
+            "value": 0.1
+          }
+        ],
+        "description_ja": "全軍の防御を10%、HPを10%増加"
+      },
+      {
+        "id": "zinman_s2",
+        "trigger": "none",
+        "chance": null,
+        "duration": null,
+        "target": null,
+        "effects": [],
+        "description_ja": "なし"
+      },
+      {
+        "id": "zinman_s3",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "全軍の与ダメージを25%増加"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.5,
+        "hp": 0.5
+      },
+      "skill_effects": [
+        {
+          "side": "defense",
+          "target": "ally_all",
+          "effect_type": "atk_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "防衛側の全軍の攻撃力を増加"
+        }
+      ]
+    },
+    "talent_skill": null,
+    "troop_type": "archer"
+  },
+  "Molly": {
+    "rarity": "legend",
+    "context": "expedition_only",
+    "base_stats": {
+      "atk": 2.0016,
+      "def": 2.0016
+    },
+    "skills": [
+      {
+        "id": "molly_s1",
+        "trigger": "on_turn_start",
+        "chance": 0.4,
+        "duration": 1,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_taken_down",
+            "value": 0.5
+          }
+        ],
+        "description_ja": "40%の確率で全軍の被ダメージを50%軽減"
+      },
+      {
+        "id": "molly_s2",
+        "trigger": "on_turn_start",
+        "chance": 0.5,
+        "duration": 1,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.5
+          }
+        ],
+        "description_ja": "50%の確率で全軍の与ダメージを50%増加"
+      },
+      {
+        "id": "molly_s3",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "全軍の与ダメージを25%増加"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.5,
+        "hp": 0.5
+      },
+      "skill_effects": [
+        {
+          "side": "defense",
+          "target": "ally_all",
+          "effect_type": "lethality_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "防衛側の全軍の殺傷力を増加"
+        }
+      ]
+    },
+    "talent_skill": null,
+    "troop_type": "lancer"
+  },
+  "Natalia": {
+    "rarity": "legend",
+    "context": "expedition_only",
+    "base_stats": {
+      "atk": 2.0016,
+      "def": 2.0016
+    },
+    "skills": [
+      {
+        "id": "natalia_s1",
+        "trigger": "on_turn_start",
+        "chance": 0.4,
+        "duration": 1,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_taken_down",
+            "value": 0.5
+          }
+        ],
+        "description_ja": "40%の確率で全軍の被ダメージを50%軽減"
+      },
+      {
+        "id": "natalia_s2",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "atk_up",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "全軍の攻撃力を25%増加"
+      },
+      {
+        "id": "natalia_s3",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "全軍の与ダメージを25%増加"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.555,
+        "hp": 0.555
+      },
+      "skill_effects": [
+        {
+          "side": "defense",
+          "target": "ally_rally",
+          "effect_type": "lethality_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "防衛側のラリー全軍の殺傷力を増加"
+        }
+      ]
+    },
+    "talent_skill": {
+      "id": "natalia_talent",
+      "trigger": "passive",
+      "condition": "always_active",
+      "target": "ally_all",
+      "effects": [
+        {
+          "type": "atk_up",
+          "value": 0.15
+        },
+        {
+          "type": "def_up",
+          "value": 0.15
+        }
+      ],
+      "description_ja": "ラリーに参加していなくても攻撃力と防御力を15%増加"
+    },
+    "troop_type": "infantry"
+  },
+  "Jeronimo": {
+    "rarity": "legend",
+    "context": "expedition_only",
+    "base_stats": {
+      "atk": 2.602,
+      "def": 2.602
+    },
+    "skills": [
+      {
+        "id": "jeronimo_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "全軍の与ダメージを25%増加"
+      },
+      {
+        "id": "jeronimo_s2",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "atk_up",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "全軍の攻撃力を25%増加"
+      },
+      {
+        "id": "jeronimo_s3",
+        "trigger": "every_n_turns",
+        "every_n": 4,
+        "chance": null,
+        "duration": 2,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.3
+          }
+        ],
+        "description_ja": "4ターン毎に全軍の与ダメージを30%増加"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.625,
+        "hp": 0.625
+      },
+      "skill_effects": [
+        {
+          "side": "attack",
+          "target": "ally_rally",
+          "effect_type": "atk_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "攻撃側のラリー全軍の攻撃力を増加"
+        }
+      ]
+    },
+    "talent_skill": {
+      "id": "jeronimo_talent",
+      "trigger": "passive",
+      "condition": "always_active",
+      "target": "ally_all",
+      "effects": [
+        {
+          "type": "lethality_up",
+          "value": 0.15
+        },
+        {
+          "type": "hp_up",
+          "value": 0.15
+        }
+      ],
+      "description_ja": "ラリーに参加していなくても殺傷力とHPを15%増加"
+    },
+    "troop_type": "infantry"
+  },
+  "Gwen": {
+    "rarity": "legend",
+    "context": "expedition_only",
+    "base_stats": {
+      "atk": 4.4435,
+      "def": 4.4435
+    },
+    "skills": [
+      {
+        "id": "gwen_s1",
+        "trigger": "on_every_attack",
+        "chance": null,
+        "duration": null,
+        "target": "primary_target",
+        "effects": [
+          {
+            "type": "damage_taken_up",
+            "value": 0.25,
+            "duration_hits": 1
+          }
+        ],
+        "description_ja": "主要ターゲットの被ダメージを25%増加（次の1ヒットまで、被ダメ上昇枠）"
+      },
+      {
+        "id": "gwen_s2",
+        "trigger": "every_n_attacks",
+        "every_n": 5,
+        "chance": null,
+        "duration": null,
+        "target": "primary_target",
+        "effects": [
+          {
+            "type": "attack_count_extra_damage",
+            "value": 1.0,
+            "description": "triggering attack deals +100% extra damage"
+          },
+          {
+            "type": "target_vulnerability",
+            "value": 0.15,
+            "duration_hits": 1,
+            "stacking_rule": "overwrite",
+            "description": "grants target Vulnerability +15% applied to next attack's extra_damage slot"
+          }
+        ],
+        "description_ja": "5回攻撃毎に主要ターゲットに+100%追加ダメージ。さらに脆弱+15%を付与（次の1ヒットの追加ダメ枠に適用）"
+      },
+      {
+        "id": "gwen_s3",
+        "trigger": "every_n_attacks",
+        "every_n": 4,
+        "chance": null,
+        "duration": null,
+        "target": "enemy_all",
+        "unit_restriction": "archer",
+        "effects": [
+          {
+            "type": "aoe_extra_damage",
+            "value": 0.5
+          }
+        ],
+        "description_ja": "弓兵のみ4回攻撃毎に全敵に+50%追加ダメージ"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 1.11,
+        "hp": 1.11
+      },
+      "skill_effects": [
+        {
+          "side": "attack",
+          "target": "ally_rally",
+          "effect_type": "lethality_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "攻撃側のラリー全軍の殺傷力を増加"
+        }
+      ]
+    },
+    "talent_skill": null,
+    "troop_type": "archer"
+  },
+  "Norah": {
+    "rarity": "legend",
+    "troop_type": "lancer",
+    "base_stats": {
+      "atk": 4.4435,
+      "def": 4.4435
+    },
+    "skills": [
+      {
+        "id": "norah_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_taken_down",
+            "value": 0.15
+          },
+          {
+            "type": "damage_dealt_up",
+            "value": 0.15
+          }
+        ],
+        "description_ja": "盾兵と弓兵の被ダメージ15%減少・与ダメージ15%増加（全軍で近似）"
+      },
+      {
+        "id": "norah_s2",
+        "trigger": "on_attack",
+        "unit_restriction": "lancer",
+        "chance": 0.2,
+        "duration": null,
+        "target": "enemy_all",
+        "effects": [
+          {
+            "type": "extra_damage",
+            "value": 1.0
+          }
+        ],
+        "description_ja": "槍兵の攻撃時20%の確率で全敵に100%追加ダメージ"
+      },
+      {
+        "id": "norah_s3",
+        "trigger": "every_n_attacks",
+        "every_n": 5,
+        "unit_restriction": "lancer",
+        "chance": null,
+        "duration": 2,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.25
+          },
+          {
+            "type": "damage_taken_down",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "槍兵5回攻撃毎に全軍の与ダメージ25%増加・被ダメ25%軽減（2ターン）"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 1.11,
+        "hp": 1.11
+      },
+      "skill_effects": [
+        {
+          "side": "defense",
+          "target": "ally_all",
+          "effect_type": "def_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "防衛側の全軍の防御力を増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Hector": {
+    "rarity": "legend",
+    "troop_type": "infantry",
+    "base_stats": {
+      "atk": 4.4435,
+      "def": 4.4435
+    },
+    "skills": [
+      {
+        "id": "hector_s1",
+        "trigger": "on_turn_start",
+        "chance": 0.4,
+        "duration": 1,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_taken_down",
+            "value": 0.5
+          }
+        ],
+        "description_ja": "40%の確率で全軍の被ダメージを50%軽減（1ターン）"
+      },
+      {
+        "id": "hector_s2",
+        "trigger": "passive_decaying",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "decaying_damage_dealt_up",
+            "unit_type": "infantry",
+            "initial_value": 2.0,
+            "decay_rate": 0.85,
+            "max_attacks": 10
+          },
+          {
+            "type": "decaying_damage_dealt_up",
+            "unit_type": "archer",
+            "initial_value": 1.0,
+            "decay_rate": 0.85,
+            "max_attacks": 10
+          }
+        ],
+        "description_ja": "盾兵200%・弓兵100%の与ダメージ増加（10攻撃で85%ずつ減衰）"
+      },
+      {
+        "id": "hector_s3",
+        "trigger": "on_attack",
+        "chance": 0.25,
+        "duration": null,
+        "target": "primary_target",
+        "effects": [
+          {
+            "type": "damage_multiply",
+            "value": 2.0
+          }
+        ],
+        "description_ja": "攻撃時25%の確率で200%ダメージ（2倍）"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 1.11,
+        "hp": 1.11
+      },
+      "skill_effects": [
+        {
+          "side": "defense",
+          "target": "ally_all",
+          "effect_type": "atk_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "防衛側の全軍の攻撃力を増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Frender": {
+    "rarity": "legend",
+    "troop_type": "lancer",
+    "base_stats": {
+      "atk": 2.4019,
+      "def": 2.4019
+    },
+    "skills": [
+      {
+        "id": "frender_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "atk_up",
+            "value": 0.15
+          },
+          {
+            "type": "def_up",
+            "value": 0.10
+          }
+        ],
+        "description_ja": "全軍の攻撃力を15%、防御力を10%増加"
+      },
+      {
+        "id": "frender_s2",
+        "trigger": "on_attack",
+        "chance": 0.25,
+        "duration": null,
+        "target": "primary_target",
+        "effects": [
+          {
+            "type": "damage_multiply",
+            "value": 2.0
+          }
+        ],
+        "description_ja": "攻撃時25%の確率で200%ダメージ"
+      },
+      {
+        "id": "frender_s3",
+        "trigger": "on_turn_start",
+        "chance": 0.40,
+        "duration": 1,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_taken_down",
+            "value": 0.5
+          }
+        ],
+        "description_ja": "40%の確率で全軍の被ダメージを50%軽減"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.6,
+        "hp": 0.6
+      },
+      "skill_effects": [
+        {
+          "side": "defense",
+          "target": "ally_all",
+          "effect_type": "hp_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "防衛側の全軍のHPを増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Alonzo": {
+    "rarity": "legend",
+    "troop_type": "archer",
+    "base_stats": {
+      "atk": 2.4019,
+      "def": 2.4019
+    },
+    "skills": [
+      {
+        "id": "alonzo_s1",
+        "trigger": "on_turn_start",
+        "chance": 0.40,
+        "duration": 1,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "lethality_up",
+            "value": 0.50
+          }
+        ],
+        "description_ja": "40%の確率で全軍の殺傷力を50%増加"
+      },
+      {
+        "id": "alonzo_s2",
+        "trigger": "on_attack",
+        "chance": 0.20,
+        "duration": 2,
+        "target": "enemy_all",
+        "effects": [
+          {
+            "type": "damage_dealt_down",
+            "value": 0.50
+          }
+        ],
+        "description_ja": "攻撃時20%の確率で敵全軍の与ダメージを50%減少（2ターン）"
+      },
+      {
+        "id": "alonzo_s3",
+        "trigger": "on_attack",
+        "chance": 0.50,
+        "duration": null,
+        "target": "primary_target",
+        "effects": [
+          {
+            "type": "extra_damage",
+            "value": 0.50
+          }
+        ],
+        "description_ja": "攻撃時50%の確率で50%追加ダメージ"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.6,
+        "hp": 0.6
+      },
+      "skill_effects": [
+        {
+          "side": "attack",
+          "target": "ally_rally",
+          "effect_type": "lethality_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "攻撃側のラリー全軍の殺傷力を増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Logan": {
+    "rarity": "legend",
+    "troop_type": "infantry",
+    "base_stats": {
+      "atk": 2.9023,
+      "def": 2.9023
+    },
+    "skills": [
+      {
+        "id": "logan_s1",
+        "trigger": "on_turn_start",
+        "chance": 0.20,
+        "duration": 3,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.40
+          }
+        ],
+        "description_ja": "20%の確率で全軍の与ダメージを40%増加（3ターン）"
+      },
+      {
+        "id": "logan_s2",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_taken_down",
+            "value": 0.20
+          }
+        ],
+        "description_ja": "全軍の被ダメージを20%軽減"
+      },
+      {
+        "id": "logan_s3",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "hp_up",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "全軍のHPを25%増加"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.7,
+        "hp": 0.7
+      },
+      "skill_effects": [
+        {
+          "side": "defense",
+          "target": "ally_all",
+          "effect_type": "def_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "防衛側の全軍の防御力を増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Greg": {
+    "rarity": "legend",
+    "troop_type": "archer",
+    "base_stats": {
+      "atk": 2.9023,
+      "def": 2.9023
+    },
+    "skills": [
+      {
+        "id": "greg_s1",
+        "trigger": "on_turn_start",
+        "chance": 0.20,
+        "duration": 3,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.40
+          }
+        ],
+        "description_ja": "20%の確率で全軍の与ダメージを40%増加（3ターン）"
+      },
+      {
+        "id": "greg_s2",
+        "trigger": "on_attack",
+        "chance": 0.20,
+        "duration": 2,
+        "target": "enemy_all",
+        "effects": [
+          {
+            "type": "damage_dealt_down",
+            "value": 0.50
+          }
+        ],
+        "description_ja": "攻撃時20%の確率で敵全軍の与ダメージを50%減少（2ターン）"
+      },
+      {
+        "id": "greg_s3",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "hp_up",
+            "value": 0.25
+          }
+        ],
+        "description_ja": "全軍のHPを25%増加"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.7,
+        "hp": 0.7
+      },
+      "skill_effects": [
+        {
+          "side": "attack",
+          "target": "ally_rally",
+          "effect_type": "hp_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "攻撃側のラリー全軍のHPを増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Mia": {
+    "rarity": "legend",
+    "troop_type": "lancer",
+    "base_stats": {
+      "atk": 2.9023,
+      "def": 2.9023
+    },
+    "skills": [
+      {
+        "id": "mia_s1",
+        "trigger": "on_attack",
+        "chance": 0.50,
+        "duration": null,
+        "target": "primary_target",
+        "effects": [
+          {
+            "type": "damage_taken_up",
+            "value": 0.50,
+            "duration_hits": 1
+          }
+        ],
+        "description_ja": "攻撃時50%の確率で対象を呪い、被ダメージを50%増加"
+      },
+      {
+        "id": "mia_s2",
+        "trigger": "on_attack",
+        "chance": 0.50,
+        "duration": null,
+        "target": "primary_target",
+        "effects": [
+          {
+            "type": "extra_damage",
+            "value": 0.50
+          }
+        ],
+        "description_ja": "攻撃時50%の確率で50%追加ダメージ"
+      },
+      {
+        "id": "mia_s3",
+        "trigger": "on_turn_start",
+        "chance": 0.40,
+        "duration": 1,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_taken_down",
+            "value": 0.50
+          }
+        ],
+        "description_ja": "40%の確率で全軍の被ダメージを50%軽減"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.7,
+        "hp": 0.7
+      },
+      "skill_effects": [
+        {
+          "side": "attack",
+          "target": "ally_rally",
+          "effect_type": "atk_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "攻撃側のラリー全軍の攻撃力を増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Akmos": {
+    "rarity": "legend",
+    "troop_type": "infantry",
+    "base_stats": {
+      "atk": 3.7029,
+      "def": 3.7029
+    },
+    "skills": [
+      {
+        "id": "akmos_s1",
+        "trigger": "every_n_attacks",
+        "every_n": 4,
+        "unit_restriction": "infantry",
+        "chance": null,
+        "duration": 2,
+        "target": "ally_all",
+        "attack_skip": true,
+        "effects": [
+          {
+            "type": "damage_taken_down",
+            "value": 0.30
+          }
+        ],
+        "description_ja": "盾兵が4回に1回攻撃を休止し、全軍の被ダメージを30%軽減（2ターン）"
+      },
+      {
+        "id": "akmos_s2",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 1.0,
+            "unit_type": "infantry"
+          }
+        ],
+        "description_ja": "盾兵の与ダメージを100%増加"
+      },
+      {
+        "id": "akmos_s3",
+        "trigger": "on_every_attack",
+        "unit_restriction": "infantry",
+        "chance": null,
+        "duration": null,
+        "target": "primary_target",
+        "effects": [
+          {
+            "type": "extra_damage",
+            "value": 0.60
+          },
+          {
+            "type": "damage_taken_up",
+            "value": 0.25,
+            "duration_turns": 1
+          }
+        ],
+        "description_ja": "盾兵の攻撃ごとに追加ダメージ60%を与え、対象の被ダメージを25%上昇（1ターン）"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.925,
+        "hp": 0.925
+      },
+      "skill_effects": [
+        {
+          "side": "defense",
+          "target": "ally_all",
+          "effect_type": "hp_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "防衛側の全軍のHPを増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Reina": {
+    "rarity": "legend",
+    "troop_type": "lancer",
+    "base_stats": {
+      "atk": 3.7029,
+      "def": 3.7029
+    },
+    "skills": [
+      {
+        "id": "reina_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.30
+          }
+        ],
+        "description_ja": "全軍の通常攻撃ダメージを30%増加"
+      },
+      {
+        "id": "reina_s2",
+        "trigger": "on_receive_damage",
+        "unit_restriction": "lancer",
+        "chance": 0.20,
+        "duration": null,
+        "target": "self_unit",
+        "effects": [
+          {
+            "type": "dodge",
+            "value": 1.0
+          }
+        ],
+        "description_ja": "槍兵が攻撃を受けた時20%の確率で回避"
+      },
+      {
+        "id": "reina_s3",
+        "trigger": "on_attack",
+        "unit_restriction": "lancer",
+        "chance": 0.25,
+        "duration": null,
+        "target": "primary_target",
+        "effects": [
+          {
+            "type": "damage_multiply",
+            "value": 2.0
+          }
+        ],
+        "description_ja": "槍兵の攻撃時25%の確率で追加攻撃（200%ダメージ）"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.925,
+        "hp": 0.925
+      },
+      "skill_effects": [
+        {
+          "side": "attack",
+          "target": "ally_rally",
+          "effect_type": "lethality_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "攻撃側のラリー全軍の殺傷力を増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Rion": {
+    "rarity": "legend",
+    "troop_type": "archer",
+    "base_stats": {
+      "atk": 3.7029,
+      "def": 3.7029
+    },
+    "skills": [
+      {
+        "id": "rion_s1",
+        "trigger": "on_turn_start",
+        "chance": 0.40,
+        "duration": 1,
+        "target": "ally_all",
+        "effects": [
+          {
+            "type": "damage_dealt_up",
+            "value": 0.50
+          }
+        ],
+        "description_ja": "40%の確率で全軍の与ダメージを50%増加"
+      },
+      {
+        "id": "rion_s2",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "enemy_all",
+        "effects": [
+          {
+            "type": "damage_dealt_down",
+            "value": 0.20
+          }
+        ],
+        "description_ja": "敵全軍の与ダメージを20%減少"
+      },
+      {
+        "id": "rion_s3",
+        "trigger": "every_n_attacks",
+        "every_n": 3,
+        "unit_restriction": "archer",
+        "chance": null,
+        "duration": null,
+        "target": "self_unit",
+        "effects": [
+          {
+            "type": "atk_up",
+            "value": 0.05,
+            "stackable": true,
+            "permanent": true
+          }
+        ],
+        "description_ja": "弓兵が3回攻撃毎に攻撃力5%増加（永続・スタック可）"
+      }
+    ],
+    "exclusive_gear": {
+      "base_stats_max": {
+        "lethality": 0.925,
+        "hp": 0.925
+      },
+      "skill_effects": [
+        {
+          "side": "defense",
+          "target": "ally_all",
+          "effect_type": "lethality_up",
+          "values": [
+            0.05,
+            0.075,
+            0.1,
+            0.125,
+            0.15
+          ],
+          "description_ja": "防衛側の全軍の殺傷力を増加"
+        }
+      ]
+    },
+    "talent_skill": null
+  },
+  "Jessie": {
+    "rarity": "Epic",
+    "context": "expedition_only",
+    "skills": [
+      {
+        "id": "jessie_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {"type": "damage_dealt_up", "value": 0.25}
+        ],
+        "description_ja": "全軍の与ダメージを25%上昇"
+      }
+    ]
+  },
+  "Seo-yoon": {
+    "rarity": "Epic",
+    "context": "expedition_only",
+    "skills": [
+      {
+        "id": "seoyoon_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {"type": "atk_up", "value": 0.25}
+        ],
+        "description_ja": "全軍の攻撃力を25%上昇"
+      }
+    ]
+  },
+  "Sergey": {
+    "rarity": "Epic",
+    "context": "expedition_only",
+    "skills": [
+      {
+        "id": "sergey_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {"type": "damage_taken_down", "value": 0.20}
+        ],
+        "description_ja": "全軍の被ダメージを20%軽減"
+      }
+    ]
+  },
+  "Patrick": {
+    "rarity": "Epic",
+    "context": "expedition_only",
+    "skills": [
+      {
+        "id": "patrick_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "ally_all",
+        "effects": [
+          {"type": "hp_up", "value": 0.25}
+        ],
+        "description_ja": "全軍のHPを25%上昇"
+      }
+    ]
+  },
+  "Bokan": {
+    "rarity": "Epic",
+    "context": "expedition_only",
+    "skills": [
+      {
+        "id": "bokan_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "enemy_all",
+        "effects": [
+          {"type": "damage_dealt_down", "value": 0.20}
+        ],
+        "description_ja": "敵全軍の与ダメージを20%低下"
+      }
+    ]
+  },
+  "Ling Xue": {
+    "rarity": "Epic",
+    "context": "expedition_only",
+    "skills": [
+      {
+        "id": "lingxue_s1",
+        "trigger": "passive",
+        "chance": null,
+        "duration": null,
+        "target": "enemy_all",
+        "effects": [
+          {"type": "atk_down", "value": 0.20}
+        ],
+        "description_ja": "敵全軍の攻撃力を20%低下"
+      }
+    ]
+  }
+}
