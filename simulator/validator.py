@@ -22,7 +22,7 @@ def validate_army_config(
     """ArmyConfig の英雄編成を検証する。"""
     errors: List[str] = []
     warnings: List[str] = []
-    seen_ids: List[str] = []
+    seen_leader_ids: List[str] = []
 
     for hc in config.heroes:
         # 1. 存在チェック
@@ -32,12 +32,13 @@ def validate_army_config(
 
         hdef = hero_defs[hc.hero_id]
 
-        # 2. 重複チェック
-        if hc.hero_id in seen_ids:
-            errors.append(
-                f"英雄 '{hc.hero_id}' が重複しています (position={hc.position})"
-            )
-        seen_ids.append(hc.hero_id)
+        # 2. リーダー枠の重複チェック（メンバー枠は同一英雄を許可）
+        if hc.position <= 2:
+            if hc.hero_id in seen_leader_ids:
+                errors.append(
+                    f"英雄 '{hc.hero_id}' がリーダー枠で重複しています (position={hc.position})"
+                )
+            seen_leader_ids.append(hc.hero_id)
 
         # 3. リーダー枠 (position 0-2) のバリデーション
         if hc.position in LEADER_TROOP_TYPE:
