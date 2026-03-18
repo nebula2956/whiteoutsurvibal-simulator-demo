@@ -9,6 +9,32 @@ from ui.optimizer_panel import render_optimizer_panel
 from simulator import run_simulation
 
 st.set_page_config(page_title="WoS Battle Simulator", layout="wide")
+
+# モバイル対応: 画面幅が狭い場合にカラムを縦並びにする
+st.markdown("""
+<style>
+@media (max-width: 768px) {
+    /* カラムを縦並びに */
+    [data-testid="stHorizontalBlock"] {
+        flex-direction: column !important;
+    }
+    [data-testid="stHorizontalBlock"] > div {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+    /* メインコンテンツの余白を詰める */
+    .main .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    /* number_input を幅いっぱいに */
+    [data-testid="stNumberInput"] {
+        width: 100% !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("WoS Battle Simulator")
 
 tab_sim, tab_opt = st.tabs(["シミュレーション", "編成最適化（CMA-ES）"])
