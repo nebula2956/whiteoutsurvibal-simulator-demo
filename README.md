@@ -1,19 +1,9 @@
 ---
-title: Whiteout Simulator
-emoji: 🚀
-colorFrom: red
-colorTo: red
+title: WoS Battle Simulator
+emoji: ⚔️
+colorFrom: blue
+colorTo: purple
 sdk: docker
-app_port: 8501
-tags:
-- streamlit
+app_port: 7860
 pinned: false
-short_description: Streamlit template space
 ---
-
-# Welcome to Streamlit!
-
-Edit `/src/streamlit_app.py` to customize this app to your heart's desire. :heart:
-
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
