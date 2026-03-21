@@ -44,6 +44,25 @@ def _build_hero_pool(key_prefix: str) -> HeroPool:
     members = []
 
     st.markdown("##### 所持レジェンド英雄（リーダー候補）")
+
+    # リーダー一括操作ボタン
+    all_leader_ids = INFANTRY_LEGENDS + LANCER_LEGENDS + ARCHER_LEGENDS
+    lcol1, lcol2, lcol3, lcol4 = st.columns(4)
+    with lcol1:
+        if st.button("全選択", key=f"{key_prefix}_leader_all"):
+            for hero_id in all_leader_ids:
+                st.session_state[f"{key_prefix}_own_{hero_id}"] = True
+    with lcol2:
+        if st.button("全解除", key=f"{key_prefix}_leader_none"):
+            for hero_id in all_leader_ids:
+                st.session_state[f"{key_prefix}_own_{hero_id}"] = False
+    with lcol3:
+        gear_all_val = st.number_input("専用Lv一括", 0, 10, 10, step=1, key=f"{key_prefix}_gear_all_val", label_visibility="collapsed")
+    with lcol4:
+        if st.button("専用Lv一括設定", key=f"{key_prefix}_gear_all"):
+            for hero_id in all_leader_ids:
+                st.session_state[f"{key_prefix}_gear_{hero_id}"] = int(gear_all_val)
+
     for group_label, candidates, dest in [
         ("盾兵", INFANTRY_LEGENDS, infantry_leaders),
         ("槍兵", LANCER_LEGENDS, lancer_leaders),
@@ -60,6 +79,18 @@ def _build_hero_pool(key_prefix: str) -> HeroPool:
                 dest.append(OwnedHero(hero_id=hero_id, gear_level=gear))
 
     st.markdown("##### 所持メンバー英雄（参加候補）")
+
+    # メンバー一括選択ボタン
+    mcol1, mcol2 = st.columns(2)
+    with mcol1:
+        if st.button("全選択", key=f"{key_prefix}_memb_all"):
+            for hero_id in ALL_HERO_IDS:
+                st.session_state[f"{key_prefix}_memb_{hero_id}"] = True
+    with mcol2:
+        if st.button("全解除", key=f"{key_prefix}_memb_none"):
+            for hero_id in ALL_HERO_IDS:
+                st.session_state[f"{key_prefix}_memb_{hero_id}"] = False
+
     for hero_id in ALL_HERO_IDS:
         owned = st.checkbox(hero_id, value=True, key=f"{key_prefix}_memb_{hero_id}")
         if owned:
@@ -182,11 +213,18 @@ def _render_beam_search(
     if session is not None and session.is_running():
         progress_bar = st.progress(0)
         status_text = st.empty()
+        score_chart = st.empty()
         live_detail = st.empty()
 
         info = session.get_latest_info()
         if info is not None:
             _display_beam_progress(info, progress_bar, status_text, live_detail)
+
+        # スコア推移グラフ
+        if session.score_history:
+            import pandas as pd
+            df_hist = pd.DataFrame(session.score_history, columns=["進捗", "ベストスコア"])
+            score_chart.line_chart(df_hist.set_index("進捗"))
 
         if st.button("中止", key="bs_stop"):
             # スレッドはdaemonなので参照を切るだけで良い
@@ -211,7 +249,7 @@ def _render_beam_search(
             st.session_state[session_key] = None
             return
 
-        _display_beam_results(result, n_reeval)
+        _display_beam_results(result, n_reeval, session.score_history)
 
         if st.button("結果をクリア", key="bs_clear"):
             st.session_state[session_key] = None
@@ -262,13 +300,45 @@ def _display_beam_progress(
     status_text.markdown(
         f"**{phase_label}** | ベスト: `{info.best_score:.4f}`"
     )
-    live_detail.markdown(f"```\n{info.message}\n{info.best_label}\n```")
+
+    # 詳細テキスト: 上位候補リスト表示
+    detail_lines = [info.message]
+
+    top_candidates = info.detail.get("top_candidates") or info.detail.get("top_leaders")
+    if top_candidates:
+        detail_lines.append("─── 上位候補 ───")
+        for rank, item in enumerate(top_candidates, 1):
+            detail_lines.append(f"{rank}. [{item['score']:.4f}] {item['label']}")
+
+    # Phase別の追加情報
+    if info.phase == "leader_screen":
+        active = info.detail.get("active", "?")
+        rnd = info.detail.get("round", "?")
+        detail_lines.insert(1, f"Round {rnd} | 残候補: {active}")
+    elif info.phase == "beam_search":
+        li = info.detail.get("leader_idx", "?")
+        total = info.detail.get("total_leaders", "?")
+        cache = info.detail.get("cache_size", "?")
+        detail_lines.insert(1, f"リーダー {li}/{total} | キャッシュサイズ: {cache}")
+    elif info.phase == "cma_refine":
+        cand = info.detail.get("candidate", "?")
+        total = info.detail.get("total", "?")
+        beam_sc = info.detail.get("beam_score", 0.0)
+        ref_sc = info.detail.get("refined_score", 0.0)
+        detail_lines.insert(1, f"候補 {cand}/{total} | ビームスコア: {beam_sc:.4f} → 精査後: {ref_sc:.4f}")
+
+    live_detail.markdown(f"```\n{chr(10).join(detail_lines)}\n```")
 
 
-def _display_beam_results(result, n_reeval: int) -> None:
+def _display_beam_results(result, n_reeval: int, score_history: list = None) -> None:
     """BeamSearchResultを表示。"""
     ci_lo, ci_hi = result.confidence_interval
     st.markdown("**最適化完了!**")
+
+    # スコア推移グラフ
+    if score_history:
+        df_hist = pd.DataFrame(score_history, columns=["進捗", "ベストスコア"])
+        st.line_chart(df_hist.set_index("進捗"))
 
     st.success(
         f"最適解: {result.label}\n\n"

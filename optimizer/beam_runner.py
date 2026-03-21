@@ -79,16 +79,21 @@ class BeamSearchResult:
 # ---------------------------------------------------------------------------
 
 def simplex_grid(resolution: int) -> List[Tuple[float, float, float]]:
-    """Evenly-spaced points on the 2-simplex. resolution=3 -> 10 points."""
+    """Evenly-spaced points on the 2-simplex, excluding 0% endpoints.
+    resolution=3 -> 10 points normally, minus the 3 zero-component corners."""
     points: List[Tuple[float, float, float]] = []
     for i in range(resolution + 1):
         for j in range(resolution + 1 - i):
             k = resolution - i - j
-            points.append((i / resolution, j / resolution, k / resolution))
+            r = (i / resolution, j / resolution, k / resolution)
+            if any(v == 0.0 for v in r):
+                continue  # 0%点を除外（探索空間は歪めずCMA-ESで補完）
+            points.append(r)
     return points
 
 
-def _dirichlet_samples(n: int, alpha: float = 1.0) -> List[Tuple[float, float, float]]:
+def _dirichlet_samples(n: int, alpha: float = 2.0) -> List[Tuple[float, float, float]]:
+    """Sample from Dirichlet distribution. alpha=2.0 biases toward center, avoiding near-zero."""
     samples = np.random.dirichlet([alpha, alpha, alpha], size=n)
     return [(float(r[0]), float(r[1]), float(r[2])) for r in samples]
 
@@ -558,13 +563,32 @@ class BeamSearchOptimizer:
                         pool.archer_leaders[best_combo[2]],
                     )
                     label = candidate_label(best_leaders, ["?"] * 4, bd[3])
+                    top_leaders = sorted(
+                        [(c, leader_data.get(c, (0.0, 1, 0.0, grid[0]))) for c in active],
+                        key=lambda x: x[1][0] / max(x[1][1], 1), reverse=True
+                    )[:5]
+                    top_labels = [
+                        {
+                            "label": candidate_label(
+                                _leaders_to_heroes(
+                                    pool.infantry_leaders[c[0]],
+                                    pool.lancer_leaders[c[1]],
+                                    pool.archer_leaders[c[2]],
+                                ),
+                                ["?"] * 4, d[3],
+                            ),
+                            "score": d[0] / max(d[1], 1),
+                        }
+                        for c, d in top_leaders
+                    ]
                     callback(PhaseInfo(
                         phase="leader_screen",
                         progress=work_done / total_work,
                         message=f"SHA Round {round_i+1}/{len(sha_rounds)}: "
                                 f"{len(active)} 候補評価中",
                         best_label=label, best_score=bd[0] / max(bd[1], 1),
-                        detail={"round": round_i + 1, "active": len(active)},
+                        detail={"round": round_i + 1, "active": len(active),
+                                "top_leaders": top_labels},
                     ))
 
             # Halve: keep top candidates
@@ -703,13 +727,18 @@ class BeamSearchOptimizer:
                 all_candidates_sorted = sorted(all_candidates, key=lambda x: x[2], reverse=True)
                 best = all_candidates_sorted[0]
                 label = candidate_label(best[0], best[1], best[3])
+                top5 = [
+                    {"label": candidate_label(c[0], c[1], c[3]), "score": c[2]}
+                    for c in all_candidates_sorted[:5]
+                ]
                 callback(PhaseInfo(
                     phase="beam_search",
                     progress=(li + 1) / total_leaders,
                     message=f"ビームサーチ: {li+1}/{total_leaders} リーダーセット完了",
                     best_label=label, best_score=best[2],
                     detail={"leader_idx": li + 1, "total_leaders": total_leaders,
-                            "cache_size": len(partial_cache)},
+                            "cache_size": len(partial_cache),
+                            "top_candidates": top5},
                 ))
 
         # Sort all candidates and return top

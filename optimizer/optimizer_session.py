@@ -50,6 +50,15 @@ class OptimizerSession:
         self._info_queue: queue.Queue[PhaseInfo] = queue.Queue()
         self._latest_info: Optional[PhaseInfo] = None
         self._thread: Optional[threading.Thread] = None
+        self.score_history: list = []  # List of (overall_progress: float, best_score: float)
+
+    # Phase weight mapping for overall progress calculation (must match optimizer_panel.py)
+    _PHASE_WEIGHTS = {
+        "leader_screen": (0.0, 0.3),
+        "beam_search": (0.3, 0.7),
+        "cma_refine": (0.7, 0.9),
+        "reeval": (0.9, 1.0),
+    }
 
     def start(self, evaluator: FitnessEvaluator, pool: HeroPool,
               config: BeamSearchConfig) -> None:
@@ -59,6 +68,7 @@ class OptimizerSession:
 
         self.status = SessionStatus(running=True)
         self.result = None
+        self.score_history = []
 
         self._thread = threading.Thread(
             target=self._run,
@@ -82,11 +92,16 @@ class OptimizerSession:
             self.status.running = False
 
     def get_latest_info(self) -> Optional[PhaseInfo]:
-        """キューから最新のPhaseInfoを取得（非ブロッキング）。"""
+        """キューから最新のPhaseInfoを取得（非ブロッキング）。スコア履歴も更新。"""
         info = None
         while not self._info_queue.empty():
             try:
                 info = self._info_queue.get_nowait()
+                # Update score history for each received info
+                lo, hi = self._PHASE_WEIGHTS.get(info.phase, (0.0, 1.0))
+                overall = lo + (hi - lo) * info.progress
+                if info.best_score > 0:
+                    self.score_history.append((round(overall, 4), round(info.best_score, 4)))
             except queue.Empty:
                 break
         if info is not None:
