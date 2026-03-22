@@ -1027,11 +1027,11 @@
         "target": "primary_target",
         "effects": [
           {
-            "type": "extra_damage",
+            "type": "extra_damage_multiplicative",
             "value": 0.50
           }
         ],
-        "description_ja": "攻撃時50%の確率で50%追加ダメージ"
+        "description_ja": "攻撃時50%の確率で50%追加ダメージ（乗算）"
       },
       {
         "id": "mia_s3",

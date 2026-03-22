@@ -343,6 +343,9 @@ class SkillEngine:
                     etype = eff["type"]
                     if etype == "extra_damage":
                         _add_skill_frac(mods, skill["id"], self._scale(eff["value"], chance))
+                    elif etype == "extra_damage_multiplicative":
+                        # Mia S2: 乗算での追加ダメージ（damage_dealt_up 枠）
+                        mods.extra_dealt_up += self._scale(eff["value"], chance)
                     elif etype == "damage_multiply":
                         if self.mode == "expected":
                             _add_skill_frac(mods, skill["id"], chance)

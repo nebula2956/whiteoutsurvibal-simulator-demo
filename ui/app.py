@@ -37,7 +37,7 @@ st.markdown("""
 
 st.title("WoS Battle Simulator")
 
-tab_sim, tab_opt = st.tabs(["シミュレーション", "編成最適化（CMA-ES）"])
+tab_sim, tab_opt = st.tabs(["シミュレーション", "編成最適化"])
 
 # ================================
 # Tab 1: シミュレーション

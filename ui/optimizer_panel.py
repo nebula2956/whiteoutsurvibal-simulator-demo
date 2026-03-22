@@ -156,6 +156,10 @@ def render_optimizer_panel(own_config: ArmyConfig, enemy_config: ArmyConfig) -> 
         st.warning("メンバー候補を最低1体選択してください。")
         return
 
+    if mode == "V2 ★NEW":
+        _render_v2(own_config, enemy_config, pool)
+        return
+
     with st.expander("評価指標の重み設定"):
         weights = _build_weights("opt")
 
@@ -163,9 +167,7 @@ def render_optimizer_panel(own_config: ArmyConfig, enemy_config: ArmyConfig) -> 
         st.error("評価指標の重みを最低1つは0より大きくしてください。")
         return
 
-    if mode == "V2 ★NEW":
-        _render_v2(own_config, enemy_config, pool)
-    elif mode == "GA + CMA-ES":
+    if mode == "GA + CMA-ES":
         _render_ga_search(own_config, enemy_config, pool, weights)
     elif mode == "Beam Search + CMA-ES":
         _render_beam_search(own_config, enemy_config, pool, weights)
