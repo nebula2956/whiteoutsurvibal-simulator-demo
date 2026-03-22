@@ -7,9 +7,9 @@ import numpy as np
 
 from .models import (
     TroopStats, UnitGroup, StatBuff, DamageMod,
-    ArmyConfig, Army,
+    ArmyConfig, Army, UNIT_TYPES,
 )
-from .buff_aggregator import BuffAggregator
+from .buff_aggregator import BuffAggregator, _apply_stat_effect
 
 
 def ratios_to_counts(ratios, total: int) -> np.ndarray:
@@ -130,15 +130,7 @@ class HeroLoader:
                 step_map = eff.get("level_to_step_map", {})
                 step_idx = step_map.get(str(gear_level), 0)
                 value = eff["values_by_step"][step_idx]
-            etype = eff["effect_type"]
-            if etype == "atk_up":
-                buf.atk += value
-            elif etype == "def_up":
-                buf.def_ += value
-            elif etype == "hp_up":
-                buf.hp += value
-            elif etype == "lethality_up":
-                buf.lethality += value
+            _apply_stat_effect(buf, eff["effect_type"], value)
 
         return buf
 
@@ -161,15 +153,24 @@ class ArmyBuilder:
                     "英雄編成エラー:\n" + "\n".join(f"  - {e}" for e in result.errors)
                 )
 
+        # バフ集約（3層 + ダメージ倍率）— units生成前に計算してHP初期値に反映
+        stat_layers, damage_mod, passive_stat_debuff, passive_dealt_debuff = \
+            self.aggregator.compute(config, self.hero_defs, self.troop_data)
+
         # 兵士グループ生成
         units: Dict[str, UnitGroup] = {}
-        type_list = ["infantry", "lancer", "archer"]
-        ratios = [config.troop_ratio.get(ut, 0.0) for ut in type_list]
+        ratios = [config.troop_ratio.get(ut, 0.0) for ut in UNIT_TYPES]
         counts = ratios_to_counts(ratios, config.rally_capacity)
-        for i, unit_type in enumerate(type_list):
+        for i, unit_type in enumerate(UNIT_TYPES):
             count = int(counts[i])
             stats = self.troop_loader.get_stats(
                 self.troop_data, unit_type, config.troop_tier, config.fc_level
+            )
+            # HPバフ3層を initial current_hp に反映（damage_engine の def_hp_per_unit と一致させる）
+            hp_mult = (
+                (1.0 + stat_layers.base[unit_type].hp)
+                * (1.0 + stat_layers.hero.hp)
+                * (1.0 + stat_layers.gear.hp)
             )
             units[unit_type] = UnitGroup(
                 unit_type=unit_type,
@@ -177,12 +178,8 @@ class ArmyBuilder:
                 fc_level=config.fc_level,
                 count=count,
                 base_stats=stats,
-                current_hp=float(stats.hp * count),
+                current_hp=float(stats.hp * hp_mult * count),
             )
-
-        # バフ集約（3層 + ダメージ倍率）
-        stat_layers, damage_mod, passive_stat_debuff, passive_dealt_debuff = \
-            self.aggregator.compute(config, self.hero_defs, self.troop_data)
 
         return Army(
             units=units,

@@ -28,18 +28,20 @@ class BeamSearchConfig:
     # Phase 1: Leader screening
     leader_top_k: int = 20
     n_member_samples: int = 5
-    ratio_grid_resolution: int = 3       # -> 10 simplex points
+    ratio_grid_resolution: int = 5       # -> 6 interior simplex points with min_val=0.05
     ratio_dirichlet_extra: int = 15      # total ~25 ratio points
     # Phase 2: Beam search
     beam_widths: Tuple[int, ...] = (16, 12, 10, 8)
     beam_elite_ratio: float = 0.7       # stochastic beam: 70% elite + 30% random
     n_random_completions: int = 5
-    coarse_grid_resolution: int = 2      # -> 6 simplex points (depth 1-2)
+    coarse_grid_resolution: int = 4      # -> 3 interior simplex points with min_val=0.1 (depth 1-2)
     # Phase 3: CMA-ES refinement
     refine_top_k: int = 5
-    refine_cma_popsize: int = 8
-    refine_cma_generations: int = 10
-    refine_n_sim: int = 30
+    refine_cma_popsize: int = 14
+    refine_cma_generations: int = 25
+    refine_n_sim: int = 50
+    refine_cma_sigma: float = 0.7
+    refine_cma_restarts: int = 2
     # Final
     n_reeval_simulations: int = 200
 
@@ -78,17 +80,15 @@ class BeamSearchResult:
 # Ratio grid helpers
 # ---------------------------------------------------------------------------
 
-def simplex_grid(resolution: int) -> List[Tuple[float, float, float]]:
-    """Evenly-spaced points on the 2-simplex, excluding 0% endpoints.
-    resolution=3 -> 10 points normally, minus the 3 zero-component corners."""
+def simplex_grid(resolution: int, min_val: float = 0.0) -> List[Tuple[float, float, float]]:
+    """Evenly-spaced points on the 2-simplex. Filters out points with any component < min_val."""
     points: List[Tuple[float, float, float]] = []
     for i in range(resolution + 1):
         for j in range(resolution + 1 - i):
             k = resolution - i - j
-            r = (i / resolution, j / resolution, k / resolution)
-            if any(v == 0.0 for v in r):
-                continue  # 0%点を除外（探索空間は歪めずCMA-ESで補完）
-            points.append(r)
+            pt = (i / resolution, j / resolution, k / resolution)
+            if all(v >= min_val for v in pt):
+                points.append(pt)
     return points
 
 
@@ -99,15 +99,15 @@ def _dirichlet_samples(n: int, alpha: float = 2.0) -> List[Tuple[float, float, f
 
 
 def build_ratio_grid(cfg: BeamSearchConfig) -> List[Tuple[float, float, float]]:
-    """Full ratio grid = simplex_grid + Dirichlet extras."""
-    grid = simplex_grid(cfg.ratio_grid_resolution)
+    """Full ratio grid = simplex_grid (min 5%) + Dirichlet extras."""
+    grid = simplex_grid(cfg.ratio_grid_resolution, min_val=0.05)
     grid += _dirichlet_samples(cfg.ratio_dirichlet_extra)
     return grid
 
 
 def build_coarse_grid(cfg: BeamSearchConfig) -> List[Tuple[float, float, float]]:
-    """Coarse grid for early beam depths."""
-    return simplex_grid(cfg.coarse_grid_resolution)
+    """Coarse grid for early beam depths (min 10%)."""
+    return simplex_grid(cfg.coarse_grid_resolution, min_val=0.1)
 
 
 def _local_refine_grid(
@@ -338,9 +338,58 @@ class RatioRefiner:
         self.heroes = heroes
         self.cfg = cfg
 
-    def run(self, initial_ratio: Tuple[float, float, float]) -> Tuple[Tuple[float, float, float], float]:
-        eps = 1e-8
-        x0 = np.log(np.array(initial_ratio) + eps)[:2]
+    def run(
+        self,
+        initial_ratio: Tuple[float, float, float],
+        callback: Optional[Callable] = None,
+        candidate_idx: int = 0,
+        total_candidates: int = 1,
+        beam_score: float = 0.0,
+    ) -> Tuple[Tuple[float, float, float], float]:
+        """マルチスタートCMA-ES。restarts回の実行から最良を選ぶ。"""
+        n_restarts = max(1, self.cfg.refine_cma_restarts)
+        total_gens = self.cfg.refine_cma_generations * n_restarts
+
+        # スタートポイント: 元の初期比率 + Dirichletランダム
+        start_points = [initial_ratio]
+        for _ in range(n_restarts - 1):
+            d = np.random.dirichlet([2, 2, 2])
+            start_points.append((float(d[0]), float(d[1]), float(d[2])))
+
+        best_ratio_overall = initial_ratio
+        best_score_overall = float("-inf")
+        gen_offset = 0
+
+        for restart_idx, start_ratio in enumerate(start_points):
+            ratio, score = self._run_single(
+                start_ratio, callback=callback,
+                candidate_idx=candidate_idx, total_candidates=total_candidates,
+                beam_score=beam_score,
+                gen_offset=gen_offset, total_gens=total_gens,
+                restart_idx=restart_idx, n_restarts=n_restarts,
+            )
+            if score > best_score_overall:
+                best_ratio_overall = ratio
+                best_score_overall = score
+            gen_offset += self.cfg.refine_cma_generations
+
+        return best_ratio_overall, best_score_overall
+
+    def _run_single(
+        self,
+        initial_ratio: Tuple[float, float, float],
+        callback: Optional[Callable] = None,
+        candidate_idx: int = 0,
+        total_candidates: int = 1,
+        beam_score: float = 0.0,
+        gen_offset: int = 0,
+        total_gens: int = 0,
+        restart_idx: int = 0,
+        n_restarts: int = 1,
+    ) -> Tuple[Tuple[float, float, float], float]:
+        r = np.clip(np.array(initial_ratio, dtype=float), 0.01, None)
+        r = r / r.sum()
+        x0 = np.clip(np.log(r)[:2], -4.9, 4.9)
 
         opts = {
             "popsize": self.cfg.refine_cma_popsize,
@@ -354,18 +403,41 @@ class RatioRefiner:
             "tolstagnation": self.cfg.refine_cma_generations + 1,
         }
 
-        es = cma.CMAEvolutionStrategy(x0.tolist(), 0.3, opts)
+        if total_gens == 0:
+            total_gens = self.cfg.refine_cma_generations
+
+        es = cma.CMAEvolutionStrategy(x0.tolist(), self.cfg.refine_cma_sigma, opts)
         template = self.evaluator.own_template
+        generation = 0
 
         while not es.stop():
             solutions = es.ask()
             fitnesses = []
+            best_gen_score = float("-inf")
             for s in solutions:
                 ratio = self._decode_ratio(np.array(s))
                 config = build_army_config(self.heroes, ratio, template)
                 score = self.evaluator.evaluate_config(config, n_sim=self.cfg.refine_n_sim)
                 fitnesses.append(-score)
+                if score > best_gen_score:
+                    best_gen_score = score
             es.tell(solutions, fitnesses)
+            generation += 1
+            if callback:
+                sigma = es.sigma
+                current_best = -es.result.fbest
+                global_gen = gen_offset + generation
+                restart_label = f" (restart {restart_idx+1}/{n_restarts})" if n_restarts > 1 else ""
+                callback(PhaseInfo(
+                    phase="cma_refine",
+                    progress=(candidate_idx + global_gen / total_gens) / total_candidates,
+                    message=f"CMA-ES {candidate_idx+1}/{total_candidates} 世代{global_gen}/{total_gens}: best={current_best:.3f} σ={sigma:.4f}{restart_label}",
+                    best_label="", best_score=current_best,
+                    detail={"candidate": candidate_idx + 1, "total": total_candidates,
+                            "generation": global_gen, "sigma": sigma,
+                            "beam_score": beam_score, "refined_score": current_best,
+                            "restart": restart_idx + 1, "restarts": n_restarts},
+                ))
 
         best_x = np.array(es.result.xbest)
         best_ratio = self._decode_ratio(best_x)
@@ -390,11 +462,11 @@ def estimate_cost(cfg: BeamSearchConfig, pool: HeroPool) -> dict:
     n_m = len(pool.members)
     total_leaders = n_i * n_l * n_a
 
-    full_grid_size = len(simplex_grid(cfg.ratio_grid_resolution)) + cfg.ratio_dirichlet_extra
-    coarse_grid_size = len(simplex_grid(cfg.coarse_grid_resolution))
+    full_grid_size = len(simplex_grid(cfg.ratio_grid_resolution, min_val=0.05)) + cfg.ratio_dirichlet_extra
+    coarse_grid_size = len(simplex_grid(cfg.coarse_grid_resolution, min_val=0.1))
 
     # Phase 1: SHA rounds (coarse→coarse→full)
-    coarse_grid_size_p1 = len(simplex_grid(cfg.coarse_grid_resolution))
+    coarse_grid_size_p1 = len(simplex_grid(cfg.coarse_grid_resolution, min_val=0.1))
     sha_r1 = total_leaders * 1 * coarse_grid_size_p1
     sha_r2 = int(total_leaders * 0.5) * 2 * coarse_grid_size_p1
     sha_r3 = max(cfg.leader_top_k, int(total_leaders * 0.25)) * cfg.n_member_samples * full_grid_size
@@ -413,8 +485,8 @@ def estimate_cost(cfg: BeamSearchConfig, pool: HeroPool) -> dict:
     # Cache reduces this significantly (estimate ~60% cache hit)
     phase2_with_cache = int(phase2 * 0.4)
 
-    # Phase 3: CMA-ES
-    phase3 = cfg.refine_top_k * cfg.refine_cma_popsize * cfg.refine_cma_generations * cfg.refine_n_sim
+    # Phase 3: CMA-ES (× restarts for multi-start)
+    phase3 = cfg.refine_top_k * cfg.refine_cma_popsize * cfg.refine_cma_generations * cfg.refine_n_sim * cfg.refine_cma_restarts
 
     # Phase 4: re-evaluation
     phase4 = cfg.refine_top_k * cfg.n_reeval_simulations
@@ -653,6 +725,7 @@ class BeamSearchOptimizer:
 
             # Start beam search
             beam: List[List[str]] = [[]]
+            eval_count = 0
 
             for depth in range(4):
                 beam_w = cfg.beam_widths[depth] if depth < len(cfg.beam_widths) else cfg.beam_widths[-1]
@@ -681,11 +754,28 @@ class BeamSearchOptimizer:
                                 refine=use_refine,
                             )
                             partial_cache[cache_key] = (score, ratio)
+                            eval_count += 1
 
                         candidates.append((score, new_partial, ratio))
 
                 # Stochastic beam selection: elite + random
                 candidates.sort(key=lambda x: x[0], reverse=True)
+                if callback and candidates:
+                    best_in_beam = candidates[0][0]
+                    best_label_str = candidate_label(leader_heroes, candidates[0][1], candidates[0][2])
+                    top_beam = [
+                        {"label": candidate_label(leader_heroes, c[1], c[2]), "score": c[0]}
+                        for c in candidates[:5]
+                    ]
+                    callback(PhaseInfo(
+                        phase="beam_search",
+                        progress=(li + depth / 4) / total_leaders,
+                        message=f"ビームサーチ: リーダー{li+1}/{total_leaders} depth{depth+1}/4 best={best_in_beam:.3f}",
+                        best_label=best_label_str, best_score=best_in_beam,
+                        detail={"leader_idx": li + 1, "total_leaders": total_leaders,
+                                "cache_size": len(partial_cache), "depth": depth + 1,
+                                "eval_count": eval_count, "top_candidates": top_beam},
+                    ))
                 # Deduplicate first
                 seen: set = set()
                 unique_candidates: List[Tuple[float, List[str], Tuple[float, float, float]]] = []
@@ -772,21 +862,17 @@ class BeamSearchOptimizer:
         for i, (leader_heroes, member_ids, beam_score, beam_ratio) in enumerate(top_k):
             heroes = _full_heroes(leader_heroes, member_ids)
             refiner = RatioRefiner(self.evaluator, heroes, cfg)
-            best_ratio, best_score = refiner.run(beam_ratio)
+            best_ratio, best_score = refiner.run(
+                beam_ratio,
+                callback=callback,
+                candidate_idx=i,
+                total_candidates=len(top_k),
+                beam_score=beam_score,
+            )
 
             config = build_army_config(heroes, best_ratio, self.evaluator.own_template)
             label = candidate_label(leader_heroes, member_ids, best_ratio)
             refined.append((config, best_score, label))
-
-            if callback:
-                callback(PhaseInfo(
-                    phase="cma_refine",
-                    progress=(i + 1) / len(top_k),
-                    message=f"CMA-ES比率最適化: {i+1}/{len(top_k)}",
-                    best_label=label, best_score=best_score,
-                    detail={"candidate": i + 1, "total": len(top_k),
-                            "beam_score": beam_score, "refined_score": best_score},
-                ))
 
         refined.sort(key=lambda x: x[1], reverse=True)
         return refined

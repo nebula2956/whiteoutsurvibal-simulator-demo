@@ -20,6 +20,19 @@ def _get_hero_skills(hc, hdef: dict) -> list:
     return all_skills[:1]
 
 
+def _get_armies(state: "BattleState", side: str):
+    """side から (自軍, 敵軍, 敵side) を返す。"""
+    if side == "a":
+        return state.army_a, state.army_b, "b"
+    return state.army_b, state.army_a, "a"
+
+
+def _add_skill_frac(mods: "SkillModifiers", skill_id: str, frac: float) -> None:
+    """additional_fracs と skill_damage_fracs を同時に更新する。"""
+    mods.additional_fracs.append(frac)
+    mods.skill_damage_fracs[skill_id] = mods.skill_damage_fracs.get(skill_id, 0) + frac
+
+
 class SkillEngine:
     """スキルトリガーを管理し、バフ/ダメージ修飾子を生成するエンジン。"""
 
@@ -45,6 +58,18 @@ class SkillEngine:
         if self.mode == "expected":
             return value * chance
         return value
+
+    def _scale_with_duration(self, value: float, chance: float, duration: int) -> float:
+        """期待値モード: duration考慮のスケーリング。
+        duration > 1 なら定常状態確率 1-(1-p)^d を使用。"""
+        if self.mode != "expected":
+            return value
+        if chance is None or chance >= 1.0:
+            return value
+        if duration <= 1:
+            return value * chance
+        uptime = 1.0 - (1.0 - chance) ** duration
+        return value * uptime
 
     # ================================================================
     # on_battle_start: バトル開始時（減衰バフ初期化）
@@ -119,7 +144,7 @@ class SkillEngine:
     ) -> List[SkillActivation]:
         """on_turn_start / every_n_turns スキルをロールして active_damage_mod を更新。"""
         activations: List[SkillActivation] = []
-        army = state.army_a if side == "a" else state.army_b
+        army, _, _ = _get_armies(state, side)
 
         # 前ターンの一時バフをデクリメント
         self._tick_turn_effects(state, side)
@@ -140,7 +165,7 @@ class SkillEngine:
                         continue
                     duration = skill.get("duration", 1)
                     for eff in skill.get("effects", []):
-                        val = self._scale(eff["value"], chance)
+                        val = self._scale_with_duration(eff["value"], chance, duration)
                         self._apply_to_active_dmg(army, eff["type"], val, duration, skill["id"], state, side)
                     # 期待値モードでも確率ロールでログ件数を正規化
                     if self._should_log(chance):
@@ -185,7 +210,7 @@ class SkillEngine:
         """on_every_attack スキルを処理。SkillModifiers と発動ログを返す。"""
         mods = SkillModifiers()
         activations: List[SkillActivation] = []
-        army = state.army_a if side == "a" else state.army_b
+        army, _, _ = _get_armies(state, side)
 
         for hc in army.heroes:
             if hc.hero_id not in hero_defs:
@@ -206,8 +231,7 @@ class SkillEngine:
                         duration_turns = eff.get("duration_turns")
                         if duration_turns:
                             # duration_turns指定: active_dmgで持続管理（Akmos S3）
-                            enemy_side = "b" if side == "a" else "a"
-                            enemy_army = state.army_b if side == "a" else state.army_a
+                            _, enemy_army, enemy_side = _get_armies(state, side)
                             self._apply_to_active_dmg(
                                 enemy_army, "damage_taken_up", eff["value"],
                                 duration_turns, skill["id"], state, enemy_side,
@@ -217,9 +241,7 @@ class SkillEngine:
                             mods.extra_taken_up += eff["value"]
                     elif etype == "extra_damage":
                         # Akmos S3: 追加ダメージ
-                        mods.additional_fracs.append(eff["value"])
-                        mods.skill_damage_fracs[skill["id"]] = \
-                            mods.skill_damage_fracs.get(skill["id"], 0) + eff["value"]
+                        _add_skill_frac(mods, skill["id"], eff["value"])
                 activations.append(SkillActivation(
                     turn=state.turn, skill_id=skill["id"],
                     unit_type="hero", triggered_by="on_every_attack",
@@ -257,21 +279,27 @@ class SkillEngine:
             for eff in skill.get("effects", []):
                 etype = eff["type"]
                 if etype == "damage_multiply":
-                    mods.crystal_lance = True
-                    # Crystal Lance: base_dmgを1倍分追加（ratio×2 → +ratio相当）
-                    mods.skill_damage_fracs[skill["id"]] = \
-                        mods.skill_damage_fracs.get(skill["id"], 0) + 1.0
+                    if self.mode == "expected":
+                        # 期待値: chance*2x + (1-chance)*1x → 追加分はchance
+                        _add_skill_frac(mods, skill["id"], chance)
+                    else:
+                        mods.crystal_lance = True
+                        # Crystal Lance: base_dmgを1倍分追加（ratio×2 → +ratio相当）
+                        mods.skill_damage_fracs[skill["id"]] = \
+                            mods.skill_damage_fracs.get(skill["id"], 0) + 1.0
                 elif etype == "extra_damage":
                     val = self._scale(eff["value"], chance)
-                    mods.additional_fracs.append(val)
-                    mods.skill_damage_fracs[skill["id"]] = \
-                        mods.skill_damage_fracs.get(skill["id"], 0) + val
+                    _add_skill_frac(mods, skill["id"], val)
                     gunpowder_fired = True
                 elif etype == "double_attack":
-                    mods.double_attack = True
-                    # 二回攻撃: 1回分の追加ダメージ相当（frac=1.0）
-                    mods.skill_damage_fracs[skill["id"]] = \
-                        mods.skill_damage_fracs.get(skill["id"], 0) + 1.0
+                    if self.mode == "expected":
+                        # 期待値: chance*2回 + (1-chance)*1回 → 追加分はchance
+                        _add_skill_frac(mods, skill["id"], chance)
+                    else:
+                        mods.double_attack = True
+                        # 二回攻撃: 1回分の追加ダメージ相当（frac=1.0）
+                        mods.skill_damage_fracs[skill["id"]] = \
+                            mods.skill_damage_fracs.get(skill["id"], 0) + 1.0
                 elif etype == "bypass_to":
                     mods.bypass_target = str(eff["value"])
                     # 迂回: ターゲット変更なのでダメージ寄与として記録
@@ -293,14 +321,11 @@ class SkillEngine:
                     continue
                 for eff in skill.get("effects", []):
                     if eff["type"] == "extra_damage_when_gunpowder_active":
-                        val = eff["value"]
-                        mods.additional_fracs.append(val)
-                        mods.skill_damage_fracs[skill["id"]] = \
-                            mods.skill_damage_fracs.get(skill["id"], 0) + val
+                        _add_skill_frac(mods, skill["id"], eff["value"])
 
         # ---------- 英雄スキル: on_attack（Norah S2, Hector S3 等）----------
         atk_type_for_hero = atk_group.unit_type
-        hero_army = state.army_a if side == "a" else state.army_b
+        hero_army, _, _ = _get_armies(state, side)
         for hc in hero_army.heroes:
             if hc.hero_id not in hero_defs:
                 continue
@@ -317,18 +342,17 @@ class SkillEngine:
                 for eff in skill.get("effects", []):
                     etype = eff["type"]
                     if etype == "extra_damage":
-                        val = self._scale(eff["value"], chance)
-                        mods.additional_fracs.append(val)
-                        mods.skill_damage_fracs[skill["id"]] = \
-                            mods.skill_damage_fracs.get(skill["id"], 0) + val
+                        _add_skill_frac(mods, skill["id"], self._scale(eff["value"], chance))
                     elif etype == "damage_multiply":
-                        mods.crystal_lance = True
-                        mods.skill_damage_fracs[skill["id"]] = \
-                            mods.skill_damage_fracs.get(skill["id"], 0) + 1.0
+                        if self.mode == "expected":
+                            _add_skill_frac(mods, skill["id"], chance)
+                        else:
+                            mods.crystal_lance = True
+                            mods.skill_damage_fracs[skill["id"]] = \
+                                mods.skill_damage_fracs.get(skill["id"], 0) + 1.0
                     elif etype == "damage_dealt_down":
                         # 敵軍への与ダメ減少デバフ（Alonzo S2, Greg S2 等）
-                        enemy_side = "b" if side == "a" else "a"
-                        enemy_army = state.army_b if side == "a" else state.army_a
+                        _, enemy_army, enemy_side = _get_armies(state, side)
                         val = self._scale(eff["value"], chance)
                         duration = skill.get("duration", 1)
                         self._apply_to_active_dmg(
@@ -353,7 +377,7 @@ class SkillEngine:
         cnt = state.skill_state.unit_attack_counters.get(counter_key, 0) + 1
         state.skill_state.unit_attack_counters[counter_key] = cnt
 
-        army = state.army_a if side == "a" else state.army_b
+        army, _, _ = _get_armies(state, side)
         for hc in army.heroes:
             if hc.hero_id not in hero_defs:
                 continue
@@ -378,10 +402,7 @@ class SkillEngine:
                 for eff in skill.get("effects", []):
                     etype = eff["type"]
                     if etype == "attack_count_extra_damage":
-                        val = eff["value"]
-                        mods.additional_fracs.append(val)
-                        mods.skill_damage_fracs[skill["id"]] = \
-                            mods.skill_damage_fracs.get(skill["id"], 0) + val
+                        _add_skill_frac(mods, skill["id"], eff["value"])
                     elif etype == "target_vulnerability":
                         # Gwen S2: 次の攻撃の追加ダメージ枠に加算（サイド別）
                         state.skill_state.vulnerability[side][def_group.unit_type] = eff["value"]
@@ -445,7 +466,7 @@ class SkillEngine:
                     taken_down_values.append(self._scale(eff["value"], chance))
 
             # on_receive_damage は防御側のスキル（side は攻撃側の逆）
-            def_side = "b" if side == "a" else "a"
+            _, _, def_side = _get_armies(state, side)
             if self._should_log(chance):
                 activations.append(SkillActivation(
                     turn=state.turn, skill_id=skill["id"],
@@ -465,8 +486,7 @@ class SkillEngine:
 
         # ---------- 英雄スキル: on_receive_damage（Reina S2: 回避） ----------
         if hero_defs:
-            def_side = "b" if side == "a" else "a"
-            def_army = state.army_b if side == "a" else state.army_a
+            _, def_army, def_side = _get_armies(state, side)
             for hc in def_army.heroes:
                 if hc.hero_id not in hero_defs:
                     continue
@@ -482,7 +502,11 @@ class SkillEngine:
                         continue
                     for eff in skill.get("effects", []):
                         if eff["type"] == "dodge":
-                            dodge = True
+                            if self.mode == "expected":
+                                # 回避確率をダメージ軽減として近似
+                                taken_down_values.append(chance)
+                            else:
+                                dodge = True
                     if self._should_log(chance):
                         activations.append(SkillActivation(
                             turn=state.turn, skill_id=skill["id"],
@@ -502,7 +526,7 @@ class SkillEngine:
             state.skill_state.active_effects_a if side == "a"
             else state.skill_state.active_effects_b
         )
-        army = state.army_a if side == "a" else state.army_b
+        army, _, _ = _get_armies(state, side)
 
         expired = []
         for eff in eff_list:

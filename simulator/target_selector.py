@@ -2,7 +2,7 @@ from __future__ import annotations
 import random
 from typing import Dict, List, Optional
 
-from .models import Army, SkillState
+from .models import Army, SkillState, UNIT_TYPES
 
 
 class TargetSelector:
@@ -13,7 +13,7 @@ class TargetSelector:
     """
 
     # 全兵種共通のターゲット優先順
-    PRIORITY = ["infantry", "lancer", "archer"]
+    PRIORITY = UNIT_TYPES
 
     def __init__(self, troop_data: Dict):
         pass  # troops.json の attack_priority は使用しない

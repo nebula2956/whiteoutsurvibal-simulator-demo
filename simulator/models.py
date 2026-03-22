@@ -2,6 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict
 
+UNIT_TYPES: List[str] = ["infantry", "lancer", "archer"]
+
 # =========================
 # 兵士
 # =========================

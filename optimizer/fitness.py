@@ -65,66 +65,53 @@ class FitnessEvaluator:
         self.cache_misses: int = 0
         self._pool: Optional[ProcessPoolExecutor] = None
 
+    def _run_cached_simulations(self, config: ArmyConfig, n_needed: int) -> Optional[List[BattleResult]]:
+        """キャッシュから既存結果を補完しつつ n_needed 件の BattleResult を返す。
+        シミュレーション失敗時は None を返す。"""
+        key = self._cache_key(config)
+        cached = self._cache.get(key, [])
+        n_more = max(0, n_needed - len(cached))
+
+        if n_more == 0:
+            self.cache_hits += 1
+        else:
+            self.cache_misses += 1
+            for _ in range(n_more):
+                try:
+                    cached.append(run_simulation(config, self.enemy_config, mode="random", validate=False))
+                except Exception as e:
+                    import traceback, sys
+                    print(f"[FitnessEvaluator] シミュレーション失敗: {type(e).__name__}: {e}", file=sys.stderr)
+                    traceback.print_exc(file=sys.stderr)
+                    return None
+            if len(self._cache) >= self.cache_max_keys and key not in self._cache:
+                oldest = next(iter(self._cache))
+                del self._cache[oldest]
+            self._cache[key] = cached
+
+        return cached[:n_needed]
+
     def __call__(self, x: np.ndarray, n_override: int | None = None) -> float:
         """CMA-ESは最小化なので負値を返す。n_overrideで再評価時のシミュレーション数を指定可能。"""
         config = decode_genome(x, self.pool, self.own_template)
-        key = self._cache_key(config)
-        n_needed = n_override or self.n_simulations
-
-        # キャッシュから既存結果を取得、不足分を追加実行
-        cached = self._cache.get(key, [])
-        n_more = max(0, n_needed - len(cached))
-
-        if n_more == 0:
-            self.cache_hits += 1
-        else:
-            self.cache_misses += 1
-
-        for _ in range(n_more):
-            try:
-                cached.append(run_simulation(config, self.enemy_config, mode="random", validate=False))
-            except Exception as e:
-                import traceback, sys
-                print(f"[FitnessEvaluator] シミュレーション失敗: {type(e).__name__}: {e}", file=sys.stderr)
-                traceback.print_exc(file=sys.stderr)
-                return 0.0
-
-        # キャッシュ更新（サイズ上限超過時は古いエントリを破棄）
-        if len(self._cache) >= self.cache_max_keys and key not in self._cache:
-            oldest = next(iter(self._cache))
-            del self._cache[oldest]
-        self._cache[key] = cached
-
-        return -self._composite_score(cached[:n_needed])
+        results = self._run_cached_simulations(config, n_override or self.n_simulations)
+        if results is None:
+            return 0.0
+        return -self._composite_score(results)
 
     def evaluate_config(self, config: ArmyConfig, n_sim: int | None = None) -> float:
         """ArmyConfigを直接評価。正のスコアを返す（高いほど良い）。"""
-        key = self._cache_key(config)
-        n_needed = n_sim or self.n_simulations
+        results = self._run_cached_simulations(config, n_sim or self.n_simulations)
+        if results is None:
+            return 0.0
+        return self._composite_score(results)
 
-        cached = self._cache.get(key, [])
-        n_more = max(0, n_needed - len(cached))
-
-        if n_more == 0:
-            self.cache_hits += 1
-        else:
-            self.cache_misses += 1
-
-        for _ in range(n_more):
-            try:
-                cached.append(run_simulation(config, self.enemy_config, mode="random", validate=False))
-            except Exception as e:
-                import traceback, sys
-                print(f"[FitnessEvaluator] シミュレーション失敗: {type(e).__name__}: {e}", file=sys.stderr)
-                traceback.print_exc(file=sys.stderr)
-                return 0.0
-
-        if len(self._cache) >= self.cache_max_keys and key not in self._cache:
-            oldest = next(iter(self._cache))
-            del self._cache[oldest]
-        self._cache[key] = cached
-
-        return self._composite_score(cached[:n_needed])
+    def evaluate_config_for_search(self, config: ArmyConfig, n_sim: int = 3) -> float:
+        """MC少数バッチで探索用スコアを返す。GA/SHA用。正のスコア（高いほど良い）。"""
+        results = self._run_cached_simulations(config, n_sim)
+        if results is None:
+            return 0.0
+        return self._composite_score_for_search(results)
 
     def evaluate_config_expected(self, config: ArmyConfig) -> float:
         """expected mode（決定論的）で1回シミュレーション。Beam Search用の高速評価。"""
@@ -144,7 +131,7 @@ class FitnessEvaluator:
             traceback.print_exc(file=sys.stderr)
             return 0.0
 
-        score = self._composite_score([result])
+        score = self._composite_score_for_search([result])
         self._expected_cache.put(key, score)
 
         return score
@@ -181,7 +168,7 @@ class FitnessEvaluator:
             for idx, key, f in futures:
                 try:
                     result = f.result()
-                    score = self._composite_score([result])
+                    score = self._composite_score_for_search([result])
                 except Exception:
                     score = 0.0
                 results[idx] = score
@@ -197,14 +184,51 @@ class FitnessEvaluator:
         return results  # type: ignore
 
     def _cache_key(self, config: ArmyConfig) -> Tuple:
-        """ArmyConfigからキャッシュキーを生成。比率は小数4桁で丸める。"""
+        """ArmyConfigからキャッシュキーを生成。比率は小数4桁で丸める。敵編成も含む。"""
         ratios = (round(config.troop_ratio["infantry"], 4),
                   round(config.troop_ratio["lancer"], 4))
         heroes = tuple(
             (h.hero_id, h.gear_level, h.position)
             for h in sorted(config.heroes, key=lambda h: h.position)
         )
-        return (ratios, heroes)
+        enemy_ratios = (round(self.enemy_config.troop_ratio.get("infantry", 0), 4),
+                        round(self.enemy_config.troop_ratio.get("lancer", 0), 4))
+        enemy_heroes = tuple(
+            (h.hero_id, h.gear_level, h.position)
+            for h in sorted(self.enemy_config.heroes, key=lambda h: h.position)
+        )
+        return (ratios, heroes, enemy_ratios, enemy_heroes)
+
+    def _composite_score_for_search(self, results: List[BattleResult]) -> float:
+        """探索フェーズ用の連続スコア。MC少数バッチでも差別化可能。
+        ユーザー設定の重みをベースに、生存率と撃破率を最低限加味する。"""
+        w = self.weights
+        if not results:
+            return 0.0
+
+        total_cap = max(self.own_template.rally_capacity, 1)
+        enemy_cap = max(self.enemy_config.rally_capacity, 1)
+
+        wins, survivals, kill_ratios = [], [], []
+        for r in results:
+            wins.append(1.0 if r.winner == "a" else 0.0)
+            survived = sum(r.final_counts_a.values()) if r.final_counts_a else 0
+            survivals.append(survived / total_cap)
+            own_kills = sum(r.total_kills_by_side.get("a", {}).values())
+            kill_ratios.append(own_kills / enemy_cap)
+
+        score = 0.0
+        if w.win_rate != 0:
+            score += w.win_rate * np.mean(wins)
+        if w.survival_ratio != 0:
+            score += w.survival_ratio * np.mean(survivals)
+        else:
+            score += 0.3 * np.mean(survivals)
+        if w.avg_kills != 0:
+            score += w.avg_kills * np.mean(kill_ratios)
+        else:
+            score += 0.2 * np.mean(kill_ratios)
+        return score
 
     def _composite_score(self, results: List[BattleResult]) -> float:
         w = self.weights
@@ -224,7 +248,7 @@ class FitnessEvaluator:
             survived = sum(r.final_counts_a.values()) if r.final_counts_a else 0
             survival_ratios.append(survived / total_cap)
 
-            own_kills = sum(r.total_kills_by_side.get("b", {}).values())
+            own_kills = sum(r.total_kills_by_side.get("a", {}).values())  # a = 自軍が敵を倒した数
             kill_ratios.append(own_kills / enemy_cap)
 
         sr = np.array(survival_ratios)

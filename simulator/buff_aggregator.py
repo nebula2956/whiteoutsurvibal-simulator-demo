@@ -1,9 +1,7 @@
 from __future__ import annotations
 from typing import Dict, Any, Tuple, List
 
-from .models import StatBuff, ArmyStatLayers, DamageMod, ArmyConfig
-
-UNIT_TYPES = ["infantry", "lancer", "archer"]
+from .models import StatBuff, ArmyStatLayers, DamageMod, ArmyConfig, UNIT_TYPES
 
 
 class BuffAggregator:
@@ -42,15 +40,7 @@ class BuffAggregator:
                 if skill.get("trigger") != "passive":
                     continue
                 for eff in skill.get("effects", []):
-                    et = eff["type"]
-                    if et == "atk_up":
-                        base[unit_type].atk += eff["value"]
-                    elif et == "def_up":
-                        base[unit_type].def_ += eff["value"]
-                    elif et == "hp_up":
-                        base[unit_type].hp += eff["value"]
-                    elif et == "lethality_up":
-                        base[unit_type].lethality += eff["value"]
+                    _apply_stat_effect(base[unit_type], eff["type"], eff["value"])
 
         # 英雄 base_stats → 該当兵種タイプの base のみに加算（ラリーリーダーのみ）
         for hc in config.heroes:
@@ -137,7 +127,8 @@ class BuffAggregator:
 # ヘルパー関数
 # ================================================================
 
-def _add_to_stat_or_dmg(stat: StatBuff, dmg: DamageMod, etype: str, value: float, unit_type: str = None) -> None:
+def _apply_stat_effect(stat: StatBuff, etype: str, value: float) -> bool:
+    """StatBuff の stat 系エフェクトを適用。適用できた場合 True を返す。"""
     if etype == "atk_up":
         stat.atk += value
     elif etype == "def_up":
@@ -146,11 +137,21 @@ def _add_to_stat_or_dmg(stat: StatBuff, dmg: DamageMod, etype: str, value: float
         stat.hp += value
     elif etype == "lethality_up":
         stat.lethality += value
-    elif etype == "damage_dealt_up":
+    else:
+        return False
+    return True
+
+
+def _add_to_stat_or_dmg(stat: StatBuff, dmg: DamageMod, etype: str, value: float, unit_type: str = None) -> None:
+    if _apply_stat_effect(stat, etype, value):
+        return
+    if etype == "damage_dealt_up":
         if unit_type:
             dmg.dealt_up_per_type[unit_type] = dmg.dealt_up_per_type.get(unit_type, 0.0) + value
         else:
             dmg.dealt_up += value
+    elif etype == "damage_additive_up":
+        dmg.additional_fracs.append(value)
     elif etype == "damage_taken_down":
         dmg.taken_down.append(value)
     elif etype == "damage_taken_up":
@@ -163,15 +164,11 @@ def _add_to_enemy_debuff(
     etype: str,
     value: float,
 ) -> None:
-    if etype == "atk_down":
-        stat_debuff.atk += value
-    elif etype == "def_down":
-        stat_debuff.def_ += value
-    elif etype == "hp_down":
-        stat_debuff.hp += value
-    elif etype == "lethality_down":
-        stat_debuff.lethality += value
-    elif etype == "damage_dealt_down":
+    # "_down" → "_up" に変換して _apply_stat_effect を再利用
+    up_etype = etype.replace("_down", "_up")
+    if _apply_stat_effect(stat_debuff, up_etype, value):
+        return
+    if etype == "damage_dealt_down":
         dealt_debuff_list.append(value)
 
 

@@ -4,7 +4,7 @@ import pandas as pd
 from collections import defaultdict
 from typing import Dict
 
-from simulator.models import BattleResult
+from simulator.models import BattleResult, UNIT_TYPES
 
 UNIT_LABELS = {"infantry": "盾兵", "lancer": "槍兵", "archer": "弓兵"}
 
@@ -52,9 +52,9 @@ def _render_battle_summary(result: BattleResult) -> None:
 
     # 全ターンのキル集計
     a_total_killed = {ut: result.total_kills_by_side.get("a", {}).get(ut, 0)
-                      for ut in ["infantry", "lancer", "archer"]}
+                      for ut in UNIT_TYPES}
     b_total_killed = {ut: result.total_kills_by_side.get("b", {}).get(ut, 0)
-                      for ut in ["infantry", "lancer", "archer"]}
+                      for ut in UNIT_TYPES}
 
     a_final = result.final_counts_a or last_log.army_a_counts
     b_final = result.final_counts_b or last_log.army_b_counts

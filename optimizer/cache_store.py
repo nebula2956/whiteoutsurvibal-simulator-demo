@@ -14,6 +14,9 @@ from typing import Dict, Optional, Tuple
 
 _DEFAULT_DB_PATH = Path(__file__).parent.parent / "cache" / "expected_cache.sqlite"
 
+# expected modeの計算ロジック変更時にインクリメント → 古いキャッシュを自動無効化
+CACHE_VERSION = 3
+
 
 class ExpectedCacheStore:
     """SQLite-backed persistent cache for expected-mode evaluation scores."""
@@ -35,6 +38,12 @@ class ExpectedCacheStore:
             )
         """)
         conn.commit()
+
+        # バージョンチェック → 不一致なら全削除
+        stored_version = self._get_version(conn)
+        if stored_version != CACHE_VERSION:
+            self.clear()
+            self._set_version(conn, CACHE_VERSION)
 
     def _get_conn(self) -> sqlite3.Connection:
         """Thread-local connection (SQLite connections are not thread-safe)."""
@@ -119,6 +128,34 @@ class ExpectedCacheStore:
         try:
             conn = self._get_conn()
             conn.execute("DELETE FROM expected_scores")
+            conn.commit()
+        except sqlite3.Error:
+            pass
+
+    def _get_version(self, conn: sqlite3.Connection) -> int:
+        """格納済みのキャッシュバージョンを取得。"""
+        try:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS cache_meta (
+                    key TEXT PRIMARY KEY,
+                    value INTEGER NOT NULL
+                )
+            """)
+            conn.commit()
+            row = conn.execute(
+                "SELECT value FROM cache_meta WHERE key = 'version'"
+            ).fetchone()
+            return row[0] if row else 0
+        except sqlite3.Error:
+            return 0
+
+    def _set_version(self, conn: sqlite3.Connection, version: int) -> None:
+        """キャッシュバージョンを設定。"""
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO cache_meta (key, value) VALUES ('version', ?)",
+                (version,),
+            )
             conn.commit()
         except sqlite3.Error:
             pass

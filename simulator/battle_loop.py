@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple, Any
 
 from .models import (
     Army, BattleState, SkillState, DamageMod,
-    SkillActivation, BattleResult,
+    SkillActivation, BattleResult, UNIT_TYPES,
 )
 from .damage_engine import DamageEngine
 from .target_selector import TargetSelector
@@ -212,10 +212,10 @@ class BattleSimulator:
         atk_army = state.army_a if side == "a" else state.army_b
         def_army = state.army_b if side == "a" else state.army_a
 
-        dmg_map: Dict[str, float] = {"infantry": 0.0, "lancer": 0.0, "archer": 0.0}
+        dmg_map: Dict[str, float] = {ut: 0.0 for ut in UNIT_TYPES}
         dmg_by_attacker: Dict[str, Dict[str, float]] = {
-            ut: {"infantry": 0.0, "lancer": 0.0, "archer": 0.0}
-            for ut in ["infantry", "lancer", "archer"]
+            ut: {t: 0.0 for t in UNIT_TYPES}
+            for ut in UNIT_TYPES
         }
 
         for unit_type, (target_type, skill_mods, troop_skills, dodged) in unit_skills.items():

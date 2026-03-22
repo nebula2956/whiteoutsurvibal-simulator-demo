@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import queue
 import threading
+import traceback
 from dataclasses import dataclass
 from typing import Optional
 
@@ -14,6 +15,7 @@ from simulator.models import ArmyConfig
 from .genome import HeroPool
 from .fitness import FitnessEvaluator, FitnessWeights
 from .beam_runner import BeamSearchOptimizer, BeamSearchConfig, BeamSearchResult, PhaseInfo
+from .ga_runner import GAOptimizer, GAConfig, GAResult
 
 
 @dataclass
@@ -51,17 +53,19 @@ class OptimizerSession:
         self._latest_info: Optional[PhaseInfo] = None
         self._thread: Optional[threading.Thread] = None
         self.score_history: list = []  # List of (overall_progress: float, best_score: float)
+        self.info_history: list = []  # List of all PhaseInfo received
 
     # Phase weight mapping for overall progress calculation (must match optimizer_panel.py)
     _PHASE_WEIGHTS = {
         "leader_screen": (0.0, 0.3),
         "beam_search": (0.3, 0.7),
+        "ga_search": (0.2, 0.7),
         "cma_refine": (0.7, 0.9),
         "reeval": (0.9, 1.0),
     }
 
     def start(self, evaluator: FitnessEvaluator, pool: HeroPool,
-              config: BeamSearchConfig) -> None:
+              config: BeamSearchConfig | GAConfig) -> None:
         """最適化を別スレッドで開始。"""
         if self.status.running:
             return
@@ -69,6 +73,7 @@ class OptimizerSession:
         self.status = SessionStatus(running=True)
         self.result = None
         self.score_history = []
+        self.info_history = []
 
         self._thread = threading.Thread(
             target=self._run,
@@ -78,15 +83,18 @@ class OptimizerSession:
         self._thread.start()
 
     def _run(self, evaluator: FitnessEvaluator, pool: HeroPool,
-             config: BeamSearchConfig) -> None:
+             config: BeamSearchConfig | GAConfig) -> None:
         try:
-            optimizer = BeamSearchOptimizer(evaluator, pool, config)
+            if isinstance(config, GAConfig):
+                optimizer = GAOptimizer(evaluator, pool, config)
+            else:
+                optimizer = BeamSearchOptimizer(evaluator, pool, config)
             self.result = optimizer.run(
                 callback=lambda info: self._info_queue.put(info)
             )
             self.status.finished = True
         except Exception as e:
-            self.status.error = f"{type(e).__name__}: {e}"
+            self.status.error = f"{type(e).__name__}: {e}\n\n{traceback.format_exc()}"
             self.status.finished = True
         finally:
             self.status.running = False
@@ -97,6 +105,7 @@ class OptimizerSession:
         while not self._info_queue.empty():
             try:
                 info = self._info_queue.get_nowait()
+                self.info_history.append(info)
                 # Update score history for each received info
                 lo, hi = self._PHASE_WEIGHTS.get(info.phase, (0.0, 1.0))
                 overall = lo + (hi - lo) * info.progress

@@ -1171,7 +1171,7 @@
         "target": "ally_all",
         "effects": [
           {
-            "type": "damage_dealt_up",
+            "type": "damage_additive_up",
             "value": 0.30
           }
         ],
