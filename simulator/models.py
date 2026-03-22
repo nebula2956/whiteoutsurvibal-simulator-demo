@@ -175,6 +175,8 @@ class SkillModifiers:
     # Crystal Lance → {id: 1.0}（base_dmgを1倍分追加）
     # Gunpowder +50% → {id: 0.5}、Gwen s2 +100% → {id: 1.0}
     skill_damage_fracs: Dict[str, float] = field(default_factory=dict)
+    # AOE追加ダメージ枠（Gwen S3等）: base_dmg × Σfracs を全敵ユニット種に独立加算
+    aoe_fracs: List[float] = field(default_factory=list)
 
 
 # =========================

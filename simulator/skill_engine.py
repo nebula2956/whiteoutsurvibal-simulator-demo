@@ -407,8 +407,8 @@ class SkillEngine:
                         # Gwen S2: 次の攻撃の追加ダメージ枠に加算（サイド別）
                         state.skill_state.vulnerability[side][def_group.unit_type] = eff["value"]
                     elif etype == "aoe_extra_damage":
-                        # Gwen s3: 追加ダメージ枠（全敵に +50%）
-                        mods.additional_fracs.append(eff["value"])
+                        # Gwen s3: base_dmg × frac を全敵ユニット種に独立加算（AOE）
+                        mods.aoe_fracs.append(eff["value"])
                     elif etype == "damage_taken_down":
                         # Akmos S1: 被ダメ軽減をactive_dmgに追加
                         duration = skill.get("duration", 1)

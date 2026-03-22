@@ -218,6 +218,9 @@ class BattleSimulator:
             for ut in UNIT_TYPES
         }
 
+        # AOE: unit_type → 発生した AOE ダメージ量（base_dmg × Σaoe_fracs）
+        aoe_dmg_by_source: Dict[str, float] = {}
+
         for unit_type, (target_type, skill_mods, troop_skills, dodged) in unit_skills.items():
             atk_group = atk_army.units[unit_type]
             def_group = def_army.units[target_type]
@@ -248,6 +251,20 @@ class BattleSimulator:
                 for skill_id, sk in result.skill_procs.items():
                     if sk > 0:
                         logger.record_skill_kills(skill_id, sk)
+
+                # AOE: base_dmg × Σaoe_fracs を記録（Gwen S3等）
+                if skill_mods.aoe_fracs:
+                    aoe_dmg_by_source[unit_type] = (
+                        aoe_dmg_by_source.get(unit_type, 0.0)
+                        + result.raw_damage * sum(skill_mods.aoe_fracs)
+                    )
+
+        # AOE ダメージを全生存ユニット種に独立加算
+        for src_type, aoe_dmg in aoe_dmg_by_source.items():
+            for t in UNIT_TYPES:
+                if def_army.units[t].is_alive():
+                    dmg_map[t] += aoe_dmg
+                    dmg_by_attacker[src_type][t] += aoe_dmg
 
         return dmg_map, dmg_by_attacker
 
