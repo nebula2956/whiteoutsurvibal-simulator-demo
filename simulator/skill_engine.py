@@ -339,10 +339,15 @@ class SkillEngine:
                 chance = skill.get("chance", 1.0)
                 if not self._roll(chance):
                     continue
+                target = skill.get("target", "primary_target")
                 for eff in skill.get("effects", []):
                     etype = eff["type"]
                     if etype == "extra_damage":
-                        _add_skill_frac(mods, skill["id"], self._scale(eff["value"], chance))
+                        if target == "enemy_all":
+                            # Norah S2等: 全敵ユニット種にAOEダメージ
+                            mods.aoe_fracs.append(self._scale(eff["value"], chance))
+                        else:
+                            _add_skill_frac(mods, skill["id"], self._scale(eff["value"], chance))
                     elif etype == "extra_damage_multiplicative":
                         # Mia S2: 乗算での追加ダメージ（damage_dealt_up 枠）
                         mods.extra_dealt_up += self._scale(eff["value"], chance)
