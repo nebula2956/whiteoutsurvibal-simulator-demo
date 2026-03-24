@@ -117,27 +117,24 @@ class CMAOptimizer:
         )
 
     def _initial_point(self, dim: int) -> np.ndarray:
+        rng = np.random.default_rng(42)
         x0 = np.zeros(dim)
-        # softmax([0,0,0]) = [1/3, 1/3, 1/3] → 均等比率
+        # 比率(x[0:3]): ゼロのまま → softmax([0,0,0]) = 均等 1/3
         idx = 3
-        # リーダー: 均等
-        for n in self.pool.leader_dims:
-            x0[idx:idx + n] = 0.5
-            idx += n
-        # メンバー: 各スロット n_m 次元、均等初期化
+        n_i, n_l, n_a = self.pool.leader_dims
         n_m = len(self.pool.members)
-        for i in range(4):
-            x0[idx:idx + n_m] = 0.5
-            idx += n_m
+        total_discrete = n_i + n_l + n_a + 4 * n_m
+        # リーダー・メンバー: ランダム初期化 → argmax がリスト順に依存しない
+        x0[idx:idx + total_discrete] = rng.uniform(-1.0, 1.0, size=total_discrete)
         return x0
 
     def _lower_bounds(self) -> list:
         n_i, n_l, n_a = self.pool.leader_dims
         n_m = len(self.pool.members)
-        # 比率3 + リーダー + メンバー4スロット×n_m
-        return [-5.0] * 3 + [0.0] * (n_i + n_l + n_a) + [0.0] * (4 * n_m)
+        # 比率・リーダー・メンバー全て同スケールで統一
+        return [-5.0] * 3 + [-5.0] * (n_i + n_l + n_a) + [-5.0] * (4 * n_m)
 
     def _upper_bounds(self) -> list:
         n_i, n_l, n_a = self.pool.leader_dims
         n_m = len(self.pool.members)
-        return [5.0] * 3 + [1.0] * (n_i + n_l + n_a) + [1.0] * (4 * n_m)
+        return [5.0] * 3 + [5.0] * (n_i + n_l + n_a) + [5.0] * (4 * n_m)
